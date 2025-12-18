@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 
 // ---------- ENV ----------
 const {
-  MONGODB_URI,
+  MONGO_URI,
   ADMIN_LOGIN,
   ADMIN_PASSWORD,
   JWT_SECRET,
