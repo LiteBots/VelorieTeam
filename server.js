@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 
 // ---------- ENV ----------
 const {
-  MONGO_URI,
+  MONGO_URL,
   ADMIN_LOGIN,
   ADMIN_PASSWORD,
   JWT_SECRET,
@@ -30,7 +30,7 @@ const {
   VAPID_PRIVATE_KEY
 } = process.env;
 
-if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
+if (!MONGO_URL) throw new Error("Missing MONGO_URL");
 if (!ADMIN_LOGIN || !ADMIN_PASSWORD) throw new Error("Missing ADMIN_LOGIN / ADMIN_PASSWORD");
 if (!JWT_SECRET) throw new Error("Missing JWT_SECRET");
 if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) throw new Error("Missing VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY");
@@ -38,7 +38,7 @@ if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) throw new Error("Missing VAPID_PUBL
 webpush.setVapidDetails("mailto:admin@velorie.pl", VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 // ---------- DB ----------
-await mongoose.connect(MONGODB_URI);
+await mongoose.connect(MONGO_URL);
 
 // ---------- Schemas ----------
 const UserSchema = new mongoose.Schema({
