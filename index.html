@@ -57,9 +57,7 @@
       0%,100%{ transform:translateY(0) translateX(0) rotate(0deg); }
       50%{ transform:translateY(-10%) translateX(5%) rotate(20deg); }
     }
-    .particle{
-      animation:particle-animation ease-in-out infinite;
-    }
+    .particle{ animation:particle-animation ease-in-out infinite; }
   </style>
 </head>
 
@@ -69,7 +67,7 @@
 <div id="particles-container" aria-hidden="true"
      class="pointer-events-none fixed inset-0 overflow-hidden z-0"></div>
 
-<!-- ================= TOPBAR ================= -->
+<!-- TOPBAR -->
 <header class="sticky top-0 z-50 backdrop-blur-xl bg-black/20 border-b border-white/10">
   <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
 
@@ -109,17 +107,15 @@
   </div>
 </header>
 
-<!-- ================= LAYOUT ================= -->
+<!-- LAYOUT -->
 <main class="relative z-10 mx-auto max-w-7xl p-4 md:p-6">
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-    <!-- SIDEBAR -->
+    <!-- SIDEBAR (widoczny dopiero od lg) -->
     <aside class="lg:col-span-1 hidden lg:block">
       <div class="p-3 rounded-2xl glass sticky top-24">
         <div class="px-3 py-2 text-xs text-white/50">Menu</div>
-        <nav id="nav" class="flex flex-col gap-2">
-          <!-- app.js inject -->
-        </nav>
+        <nav id="nav" class="flex flex-col gap-2"></nav>
         <div class="mt-3 border-t border-white/10 pt-3">
           <button id="btnLogout2"
                   class="w-full inline-flex items-center justify-center gap-2 rounded-xl btn-accent px-4 py-3 text-sm font-semibold">
@@ -192,15 +188,28 @@
       <!-- APP -->
       <section id="viewApp" class="hidden space-y-6">
 
+        <!-- DASH HEADER (tu są brakujące id!) -->
         <div class="glass rounded-2xl p-6">
-          <div class="flex justify-between">
+          <div class="flex items-start justify-between gap-4">
             <div>
               <h2 class="text-2xl font-bold">Dashboard</h2>
-              <p class="text-white/60">Szybki podgląd</p>
+              <p id="dashSubtitle" class="text-white/60">Szybki podgląd</p>
             </div>
             <div class="text-right">
               <div class="text-xs text-white/50">Zalogowano jako</div>
               <div id="whoami" class="font-semibold"></div>
+            </div>
+          </div>
+
+          <!-- STAT CARDS (tu są brakujące id!) -->
+          <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="rounded-2xl chip p-5">
+              <div class="text-xs text-white/60">Ludzi w zespole</div>
+              <div id="statTeam" class="text-3xl font-bold mt-1">—</div>
+            </div>
+            <div class="rounded-2xl chip p-5">
+              <div class="text-xs text-white/60">Dochód / Portfel</div>
+              <div id="statIncome" class="text-3xl font-bold mt-1">—</div>
             </div>
           </div>
         </div>
@@ -216,15 +225,7 @@
 <div id="toasts"
      class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] space-y-2 w-[92%] max-w-md"></div>
 
-<!-- ================= UX PACK ================= -->
-<script src="/ux-pack.js"></script>
-
-<!-- ================= APP ================= -->
-<script src="/app.js"></script>
-
-<script>
-  lucide.createIcons();
-</script>
-
+<!-- APP -->
+<script src="/app.js" defer></script>
 </body>
 </html>
