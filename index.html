@@ -1,10 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>VelorieTeam – PWA</title>
+
   <meta name="theme-color" content="#0a1030" />
   <meta name="description" content="VelorieTeam – panel zespołu (admin/pracownik) z projektami, zleceniami i push." />
 
@@ -16,189 +16,215 @@
 
   <style>
     :root{ --accent:#ff0354; }
+
     body{
       background-color:#00010f;
-      background-image: radial-gradient(1200px 600px at 80% -10%, #0a1030 0%, #050919 35%, #00010f 65%, #000000 100%);
+      background-image: radial-gradient(
+        1200px 600px at 80% -10%,
+        #0a1030 0%,
+        #050919 35%,
+        #00010f 65%,
+        #000000 100%
+      );
     }
-    ::-webkit-scrollbar{ width:10px; height:10px;}
-    ::-webkit-scrollbar-thumb{ background:var(--accent); border-radius:999px;}
-    ::-webkit-scrollbar-track{ background:rgba(255,255,255,.08);}
+
+    ::-webkit-scrollbar{ width:10px; height:10px; }
+    ::-webkit-scrollbar-thumb{ background:var(--accent); border-radius:999px; }
+    ::-webkit-scrollbar-track{ background:rgba(255,255,255,.08); }
+
+    .glass{
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(18px);
+    }
+    .chip{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .chip:hover{ background:rgba(255,255,255,.10); }
+
+    .btn-accent{
+      background:rgba(255,3,84,.95);
+    }
+    .btn-accent:hover{ filter:brightness(1.08); }
+
+    .overlay{
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+    }
 
     @keyframes particle-animation{
       0%,100%{ transform:translateY(0) translateX(0) rotate(0deg); }
       50%{ transform:translateY(-10%) translateX(5%) rotate(20deg); }
     }
-    .particle{ animation-name:particle-animation; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
-
-    .glass{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10); backdrop-filter: blur(18px); }
-    .btn-accent{ background:rgba(255,3,84,.92); }
-    .btn-accent:hover{ filter:brightness(1.08); }
-    .chip{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); }
-    .chip:hover{ background:rgba(255,255,255,.10); }
-
-    /* mobile sidebar overlay */
-    .overlay{ background: rgba(0,0,0,.45); backdrop-filter: blur(6px); }
+    .particle{
+      animation:particle-animation ease-in-out infinite;
+    }
   </style>
 </head>
 
 <body class="min-h-screen text-white selection:bg-[#ff0354]/40 selection:text-white">
 
-  <div id="particles-container" aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden z-0"></div>
+<!-- PARTICLES -->
+<div id="particles-container" aria-hidden="true"
+     class="pointer-events-none fixed inset-0 overflow-hidden z-0"></div>
 
-  <!-- TOPBAR -->
-  <header class="sticky top-0 z-50 backdrop-blur-xl bg-black/20 border-b border-white/10">
-    <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <button id="btnMenu" class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl chip">
-          <i data-lucide="menu" class="w-5 h-5"></i>
-        </button>
-        <a href="/" class="flex items-center gap-3">
-          <img src="/favicon.png" class="h-10 w-10 rounded-xl ring-1 ring-white/10" alt="logo">
-          <div class="leading-tight">
-            <div class="text-lg font-semibold tracking-tight">VelorieTeam</div>
-            <div id="subTitle" class="text-xs text-white/60">Panel zespołu</div>
-          </div>
-        </a>
-      </div>
+<!-- ================= TOPBAR ================= -->
+<header class="sticky top-0 z-50 backdrop-blur-xl bg-black/20 border-b border-white/10">
+  <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
 
-      <div class="flex items-center gap-2">
-        <div class="hidden sm:flex items-center gap-2 rounded-lg chip px-4 py-2 text-sm font-medium">
-          <i data-lucide="wallet" class="h-4 w-4 text-[var(--accent)]"></i>
-          <span id="topBalance">0.00 PLN</span>
+    <div class="flex items-center gap-3">
+      <button id="btnMenu"
+              class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl chip">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+
+      <a href="/" class="flex items-center gap-3">
+        <img src="/favicon.png" class="h-10 w-10 rounded-xl ring-1 ring-white/10" alt="logo">
+        <div class="leading-tight">
+          <div class="text-lg font-semibold tracking-tight">VelorieTeam</div>
+          <div class="text-xs text-white/60">Panel zespołu</div>
         </div>
-        <button id="btnEnablePush" class="inline-flex items-center gap-2 rounded-lg chip px-4 py-2 text-sm font-medium">
-          <i data-lucide="bell" class="h-4 w-4"></i>
-          <span class="hidden sm:inline">Push</span>
-        </button>
-        <button id="btnLogout" class="hidden inline-flex items-center gap-2 rounded-lg btn-accent px-4 py-2 text-sm font-medium">
-          <i data-lucide="log-out" class="h-4 w-4"></i>
-          <span class="hidden sm:inline">Wyloguj</span>
-        </button>
-      </div>
+      </a>
     </div>
-  </header>
 
-  <!-- LAYOUT -->
-  <main class="relative z-10 mx-auto max-w-7xl p-4 md:p-6">
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <div class="flex items-center gap-2">
+      <div class="hidden sm:flex items-center gap-2 rounded-lg chip px-4 py-2 text-sm font-medium">
+        <i data-lucide="wallet" class="h-4 w-4 text-[var(--accent)]"></i>
+        <span id="topBalance">0.00 PLN</span>
+      </div>
 
-      <!-- SIDEBAR -->
-      <aside id="sidebar" class="lg:col-span-1 hidden lg:block">
-        <div class="p-3 rounded-2xl glass sticky top-24">
-          <div class="px-3 py-2 text-xs text-white/50">Menu</div>
-          <nav id="nav" class="flex flex-col gap-2">
-            <!-- injected -->
-          </nav>
-          <div class="mt-3 border-t border-white/10 pt-3">
-            <button id="btnLogout2" class="w-full inline-flex items-center justify-center gap-2 rounded-xl btn-accent px-4 py-3 text-sm font-semibold">
+      <button id="btnEnablePush"
+              class="inline-flex items-center gap-2 rounded-lg chip px-4 py-2 text-sm font-medium">
+        <i data-lucide="bell" class="h-4 w-4"></i>
+        <span class="hidden sm:inline">Push</span>
+      </button>
+
+      <button id="btnLogout"
+              class="hidden inline-flex items-center gap-2 rounded-lg btn-accent px-4 py-2 text-sm font-medium">
+        <i data-lucide="log-out" class="h-4 w-4"></i>
+        Wyloguj
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ================= LAYOUT ================= -->
+<main class="relative z-10 mx-auto max-w-7xl p-4 md:p-6">
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+    <!-- SIDEBAR -->
+    <aside class="lg:col-span-1 hidden lg:block">
+      <div class="p-3 rounded-2xl glass sticky top-24">
+        <div class="px-3 py-2 text-xs text-white/50">Menu</div>
+        <nav id="nav" class="flex flex-col gap-2">
+          <!-- app.js inject -->
+        </nav>
+        <div class="mt-3 border-t border-white/10 pt-3">
+          <button id="btnLogout2"
+                  class="w-full inline-flex items-center justify-center gap-2 rounded-xl btn-accent px-4 py-3 text-sm font-semibold">
+            <i data-lucide="log-out" class="h-4 w-4"></i>
+            Wyloguj
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MOBILE SIDEBAR -->
+    <div id="mobileOverlay" class="fixed inset-0 z-50 hidden overlay lg:hidden">
+      <div class="absolute inset-0" id="overlayClose"></div>
+      <div class="absolute left-0 top-0 h-full w-[82%] max-w-sm p-4">
+        <div class="p-3 rounded-2xl glass h-full flex flex-col">
+          <div class="flex items-center justify-between px-2 py-2">
+            <div class="text-sm font-semibold">VelorieTeam</div>
+            <button id="btnCloseMenu"
+                    class="w-10 h-10 rounded-xl chip inline-flex items-center justify-center">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <div class="px-2 py-2 text-xs text-white/50">Menu</div>
+          <nav id="navMobile" class="flex flex-col gap-2 px-1 overflow-auto"></nav>
+          <div class="mt-auto pt-3 border-t border-white/10">
+            <button id="btnLogoutMobile"
+                    class="w-full inline-flex items-center justify-center gap-2 rounded-xl btn-accent px-4 py-3 text-sm font-semibold">
               <i data-lucide="log-out" class="h-4 w-4"></i>
               Wyloguj
             </button>
           </div>
         </div>
-      </aside>
+      </div>
+    </div>
 
-      <!-- MOBILE SIDEBAR OVERLAY -->
-      <div id="mobileOverlay" class="fixed inset-0 z-50 hidden overlay lg:hidden">
-        <div class="absolute inset-0" id="overlayClose"></div>
-        <div class="absolute left-0 top-0 h-full w-[82%] max-w-sm p-4">
-          <div class="p-3 rounded-2xl glass h-full flex flex-col">
-            <div class="flex items-center justify-between px-2 py-2">
-              <div class="text-sm font-semibold">VelorieTeam</div>
-              <button id="btnCloseMenu" class="w-10 h-10 rounded-xl chip inline-flex items-center justify-center">
-                <i data-lucide="x" class="w-5 h-5"></i>
-              </button>
+    <!-- CONTENT -->
+    <section class="lg:col-span-4 space-y-6">
+
+      <!-- LOGIN -->
+      <section id="viewLogin" class="glass rounded-2xl p-6 md:p-8">
+        <h1 class="text-3xl font-bold">Zaloguj się</h1>
+        <p class="text-white/60 mt-2">Panel VelorieTeam (PWA)</p>
+
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-white/80 mb-2">Login</label>
+            <input id="loginLogin"
+                   class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[var(--accent)]"
+                   placeholder="admin" />
+          </div>
+          <div>
+            <label class="block text-sm text-white/80 mb-2">Hasło</label>
+            <input id="loginPassword" type="password"
+                   class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[var(--accent)]"
+                   placeholder="••••••••" />
+          </div>
+        </div>
+
+        <button id="btnLogin"
+                class="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl btn-accent px-5 py-3 font-semibold">
+          <i data-lucide="log-in" class="h-5 w-5"></i>
+          Zaloguj
+        </button>
+
+        <div class="mt-3 text-xs text-white/50">
+          Dane admina z Railway: <code>ADMIN_LOGIN</code> / <code>ADMIN_PASSWORD</code>
+        </div>
+      </section>
+
+      <!-- APP -->
+      <section id="viewApp" class="hidden space-y-6">
+
+        <div class="glass rounded-2xl p-6">
+          <div class="flex justify-between">
+            <div>
+              <h2 class="text-2xl font-bold">Dashboard</h2>
+              <p class="text-white/60">Szybki podgląd</p>
             </div>
-            <div class="px-2 py-2 text-xs text-white/50">Menu</div>
-            <nav id="navMobile" class="flex flex-col gap-2 px-1 overflow-auto"></nav>
-            <div class="mt-auto pt-3 border-t border-white/10">
-              <button id="btnLogoutMobile" class="w-full inline-flex items-center justify-center gap-2 rounded-xl btn-accent px-4 py-3 text-sm font-semibold">
-                <i data-lucide="log-out" class="h-4 w-4"></i>
-                Wyloguj
-              </button>
+            <div class="text-right">
+              <div class="text-xs text-white/50">Zalogowano jako</div>
+              <div id="whoami" class="font-semibold"></div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- CONTENT -->
-      <section class="lg:col-span-4 space-y-6">
-
-        <!-- LOGIN VIEW -->
-        <section id="viewLogin" class="glass rounded-2xl p-6 md:p-8">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h1 class="text-3xl font-bold">Zaloguj się</h1>
-              <p class="text-white/60 mt-2">VelorieTeam działa jako PWA. Po zalogowaniu masz dostęp do panelu.</p>
-            </div>
-            <div class="hidden sm:block text-right text-sm text-white/60">
-              <div class="inline-flex items-center gap-2 chip px-3 py-2 rounded-xl">
-                <i data-lucide="shield" class="w-4 h-4 text-[var(--accent)]"></i>
-                <span>Secure Login</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm text-white/80 mb-2">Login</label>
-              <input id="loginLogin" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" placeholder="np. admin" />
-            </div>
-            <div>
-              <label class="block text-sm text-white/80 mb-2">Hasło</label>
-              <input id="loginPassword" type="password" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" placeholder="••••••••" />
-            </div>
-          </div>
-
-          <button id="btnLogin" class="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl btn-accent px-5 py-3 font-semibold shadow-[0_8px_30px_rgba(255,3,84,0.35)]">
-            <i data-lucide="log-in" class="h-5 w-5"></i>
-            Zaloguj
-          </button>
-
-          <div class="mt-3 text-xs text-white/50">
-            Admin jest trzymany w zmiennych Railway (`ADMIN_LOGIN`, `ADMIN_PASSWORD`).
-          </div>
-        </section>
-
-        <!-- APP VIEW -->
-        <section id="viewApp" class="hidden space-y-6">
-
-          <!-- DASH -->
-          <div class="glass rounded-2xl p-6">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <h2 class="text-2xl font-bold">Dashboard</h2>
-                <p id="dashSubtitle" class="text-white/60 mt-1">Statystyki i szybki podgląd.</p>
-              </div>
-              <div class="text-right">
-                <div class="text-xs text-white/50">Zalogowano jako</div>
-                <div id="whoami" class="font-semibold"></div>
-              </div>
-            </div>
-
-            <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div class="rounded-2xl chip p-5">
-                <div class="text-xs text-white/60">Ludzi w zespole</div>
-                <div id="statTeam" class="text-3xl font-bold mt-1">—</div>
-              </div>
-              <div class="rounded-2xl chip p-5">
-                <div class="text-xs text-white/60">Dochód / Portfel</div>
-                <div id="statIncome" class="text-3xl font-bold mt-1">—</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ROUTER OUTLET -->
-          <div id="outlet" class="space-y-6"></div>
-        </section>
-
+        <div id="outlet" class="space-y-6"></div>
       </section>
-    </div>
-  </main>
 
-  <!-- TOAST -->
-  <div id="toasts" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] space-y-2 w-[92%] max-w-md"></div>
+    </section>
+  </div>
+</main>
 
-  <script src="/app.js"></script>
+<!-- TOASTS -->
+<div id="toasts"
+     class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] space-y-2 w-[92%] max-w-md"></div>
+
+<!-- ================= UX PACK ================= -->
+<script src="/ux-pack.js"></script>
+
+<!-- ================= APP ================= -->
+<script src="/app.js"></script>
+
+<script>
+  lucide.createIcons();
+</script>
+
 </body>
 </html>
