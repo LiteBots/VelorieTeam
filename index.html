@@ -1,0 +1,1825 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>VelorieTeam – PWA</title>
+  <meta name="theme-color" content="#0a1030" />
+  <meta name="description" content="VelorieTeam – panel zespołu: projekty, zadania, bugi, dokumentacja i komunikacja." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root { --accent:#ff0354; }
+    body{
+      background-color:#00010f;
+      background-image: radial-gradient(1200px 600px at 80% -10%, #0a1030 0%, #050919 35%, #00010f 65%, #000000 100%);
+    }
+    ::-webkit-scrollbar{width:10px;height:10px}
+    ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:999px}
+    ::-webkit-scrollbar-track{background:rgba(255,255,255,.08)}
+    @keyframes particle-animation{
+      0%,100%{transform:translateY(0%) translateX(0%) rotate(0deg)}
+      50%{transform:translateY(-10%) translateX(5%) rotate(20deg)}
+    }
+    .particle{
+      animation-name:particle-animation;
+      animation-timing-function:ease-in-out;
+      animation-iteration-count:infinite;
+    }
+    /* mobile niceness */
+    .tap { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+
+<body class="min-h-screen text-white selection:bg-[#ff0354]/40 selection:text-white tap">
+  <div id="particles-container" aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden z-0"></div>
+
+  <!-- Toasts -->
+  <div id="toasts" class="fixed z-[100] left-3 right-3 bottom-3 space-y-2"></div>
+
+  <!-- App Root -->
+  <div class="relative z-10 min-h-screen">
+    <!-- Topbar -->
+    <header class="sticky top-0 z-50 backdrop-blur-xl bg-black/20 border-b border-white/10">
+      <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
+        <a href="#/" class="flex items-center gap-3">
+          <!-- logo: to samo co w kodzie powyżej -->
+          <img src="https://i.imgur.com/ikYb7tH.png" alt="logo" class="h-10 w-10 rounded-xl ring-1 ring-white/10" />
+          <div class="leading-tight">
+            <div class="text-lg font-semibold tracking-tight">VelorieTeam</div>
+            <div id="top-subtitle" class="text-xs text-white/60">Panel zespołu</div>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <button id="btn-push" class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10 transition">
+            <i data-lucide="bell-ring" class="h-4 w-4 text-[var(--accent)]"></i>
+            <span>Push</span>
+          </button>
+
+          <button id="btn-sync" class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10 transition">
+            <i data-lucide="refresh-ccw" class="h-4 w-4"></i>
+            <span>Odśwież</span>
+          </button>
+
+          <button id="btn-menu" class="inline-flex sm:hidden items-center justify-center rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10 transition" aria-label="Menu">
+            <i data-lucide="menu" class="h-5 w-5"></i>
+          </button>
+
+          <button id="btn-logout" class="hidden items-center gap-2 rounded-lg bg-[var(--accent)]/80 px-3 py-2 text-sm font-semibold hover:bg-[var(--accent)] transition">
+            <i data-lucide="log-out" class="h-4 w-4"></i>
+            <span class="hidden sm:inline">Wyloguj</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Layout -->
+    <main class="mx-auto max-w-7xl p-4 md:p-6 pb-28">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Sidebar (desktop) -->
+        <aside class="hidden lg:block lg:col-span-3">
+          <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl sticky top-24">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                <i data-lucide="sparkles" class="h-5 w-5 text-[var(--accent)]"></i>
+              </div>
+              <div class="leading-tight">
+                <div id="sidebar-hello" class="text-sm font-semibold">Witaj 👋</div>
+                <div id="sidebar-meta" class="text-xs text-white/60">Zaloguj się</div>
+              </div>
+            </div>
+
+            <nav id="nav" class="flex flex-col gap-1 text-sm">
+              <!-- filled by JS -->
+            </nav>
+          </div>
+        </aside>
+
+        <!-- Content -->
+        <section class="lg:col-span-9">
+          <div id="view"></div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Mobile drawer -->
+    <div id="drawer" class="fixed inset-0 z-[90] hidden">
+      <div id="drawer-backdrop" class="absolute inset-0 bg-black/60"></div>
+      <div class="absolute left-0 top-0 bottom-0 w-[86%] max-w-xs p-4 border-r border-white/10 bg-black/40 backdrop-blur-xl">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <img src="https://i.imgur.com/ikYb7tH.png" alt="logo" class="h-9 w-9 rounded-xl ring-1 ring-white/10" />
+            <div class="leading-tight">
+              <div class="text-base font-semibold">VelorieTeam</div>
+              <div id="drawer-meta" class="text-xs text-white/60">Menu</div>
+            </div>
+          </div>
+          <button id="btn-close-drawer" class="inline-flex items-center justify-center rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10 transition" aria-label="Zamknij">
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+        </div>
+
+        <div class="mt-4 p-3 rounded-2xl border border-white/10 bg-white/5">
+          <div id="drawer-hello" class="text-sm font-semibold">Witaj 👋</div>
+          <div id="drawer-sub" class="text-xs text-white/60">Zaloguj się</div>
+        </div>
+
+        <nav id="nav-mobile" class="mt-4 flex flex-col gap-1 text-sm"></nav>
+
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <button id="btn-push-m" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10 transition">
+            <i data-lucide="bell-ring" class="h-4 w-4 text-[var(--accent)]"></i>
+            <span>Push</span>
+          </button>
+          <button id="btn-sync-m" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10 transition">
+            <i data-lucide="refresh-ccw" class="h-4 w-4"></i>
+            <span>Odśwież</span>
+          </button>
+          <button id="btn-logout-m" class="col-span-2 hidden inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)]/80 px-3 py-2 text-sm font-semibold hover:bg-[var(--accent)] transition">
+            <i data-lucide="log-out" class="h-4 w-4"></i>
+            <span>Wyloguj</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom nav (mobile) -->
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t border-white/10 bg-black/35 backdrop-blur-xl">
+      <div class="mx-auto max-w-7xl px-3 py-2 grid grid-cols-5 gap-2 text-xs">
+        <!-- filled by JS -->
+      </div>
+    </nav>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 z-[110] hidden">
+      <div id="modal-backdrop" class="absolute inset-0 bg-black/70"></div>
+      <div class="absolute left-1/2 top-1/2 w-[92%] max-w-lg -translate-x-1/2 -translate-y-1/2 p-4 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div id="modal-title" class="text-base font-semibold">Modal</div>
+            <div id="modal-sub" class="text-xs text-white/60 mt-1"></div>
+          </div>
+          <button id="modal-close" class="inline-flex items-center justify-center rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10 transition" aria-label="Zamknij">
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+        </div>
+        <div id="modal-body" class="mt-4"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    //  CONFIG (MVP)
+    // =========================
+    // W PRODUKCJI: zamiast tego zrób /api/auth/login na backendzie, a admin login+hasło trzymaj w ENV.
+    const ADMIN_LOGIN = "admin";      // <- placeholder
+    const ADMIN_PASSWORD = "0051";    // <- placeholder
+
+    const LS = {
+      session: "vt_session",
+      db: "vt_db_v1"
+    };
+
+    const ROLE_PERMS = {
+      admin:   { canEditAll: true,  canSeeSecrets: true,  canManageUsers: true  },
+      pm:      { canEditAll: true,  canSeeSecrets: false, canManageUsers: false },
+      dev:     { canEditAll: false, canSeeSecrets: false, canManageUsers: false },
+      designer:{ canEditAll: false, canSeeSecrets: false, canManageUsers: false },
+    };
+
+    const NAV_ITEMS = [
+      { key:"dashboard",  label:"Dashboard",    icon:"layout-dashboard", hash:"#/dashboard", mobile:true, bottom:true },
+      { key:"team",       label:"Zespół & role",icon:"users",            hash:"#/team",      mobile:true, bottom:true },
+      { key:"projects",   label:"Projekty",     icon:"layers",           hash:"#/projects",  mobile:true, bottom:true },
+      { key:"tasks",      label:"Zadania",      icon:"check-square",     hash:"#/tasks",     mobile:true, bottom:true },
+      { key:"bugs",       label:"Bug tracker",  icon:"bug",              hash:"#/bugs",      mobile:true, bottom:true },
+
+      { key:"design",     label:"Design hub",   icon:"palette",          hash:"#/design",    mobile:true },
+      { key:"assets",     label:"Asset manager",icon:"images",           hash:"#/assets",    mobile:true },
+      { key:"docs",       label:"Wiki / Docs",  icon:"book-text",        hash:"#/docs",      mobile:true },
+      { key:"snippets",   label:"Snippety",     icon:"braces",           hash:"#/snippets",  mobile:true },
+      { key:"releases",   label:"Release",      icon:"rocket",           hash:"#/releases",  mobile:true },
+      { key:"automation", label:"Automatyzacje",icon:"zap",              hash:"#/automation",mobile:true },
+      { key:"ai",         label:"AI Asystent",  icon:"sparkles",         hash:"#/ai",        mobile:true },
+      { key:"secrets",    label:"Dostępy",      icon:"key-round",        hash:"#/secrets",   mobile:true, adminOnly:true },
+      { key:"git",        label:"Integracje Git",icon:"git-branch",      hash:"#/git",       mobile:true },
+      { key:"comms",      label:"Komunikacja",  icon:"messages-square",  hash:"#/comms",     mobile:true },
+    ];
+
+    // =========================
+    //  DB (local MVP)
+    // =========================
+    function uid(prefix="ID") {
+      return prefix + "-" + Math.random().toString(16).slice(2, 8).toUpperCase();
+    }
+
+    function loadDB() {
+      const raw = localStorage.getItem(LS.db);
+      if (raw) {
+        try { return JSON.parse(raw); } catch (e) {}
+      }
+      // seed
+      const db = {
+        users: [
+          { id:"U-ADMIN", name:"Admin", email:"admin@velorie.pl", role:"admin", status:"online" },
+          { id:"U-1", name:"Klaudia", email:"klaudia@velorie.pl", role:"designer", status:"focus" },
+          { id:"U-2", name:"Bartek", email:"bartek@velorie.pl", role:"dev", status:"online" },
+          { id:"U-3", name:"Ola", email:"ola@velorie.pl", role:"pm", status:"urlop" },
+        ],
+        projects: [
+          {
+            id:"P-1", name:"ItemShop Panel", state:"aktywny",
+            members:["U-ADMIN","U-2","U-1","U-3"],
+            stack:["Next.js","Tailwind","Node.js","PostgreSQL"],
+            links:{ repo:"https://github.com/org/repo", figma:"https://figma.com/file/xyz", domain:"https://velorie.pl", staging:"https://staging.velorie.pl" }
+          },
+          {
+            id:"P-2", name:"VelorieTeam", state:"aktywny",
+            members:["U-ADMIN","U-2","U-3"],
+            stack:["React","Tailwind","Express","MongoDB"],
+            links:{ repo:"https://gitlab.com/org/velorieteam", figma:"", domain:"", staging:"" }
+          }
+        ],
+        tasks: [
+          { id:"T-1", title:"Ekran logowania", status:"Done", prio:"High", deadline:"2025-12-29", assignee:"U-2", tags:["frontend"], checklist:["UI","walidacja"], comments:[] },
+          { id:"T-2", title:"Role i uprawnienia", status:"In Progress", prio:"High", deadline:"2025-12-30", assignee:"U-ADMIN", tags:["backend"], checklist:["RBAC","secrets tab"], comments:[] },
+          { id:"T-3", title:"Tablica backlog", status:"ToDo", prio:"Medium", deadline:"2026-01-05", assignee:"U-3", tags:["pm"], checklist:["kolumny","filtry"], comments:[] },
+        ],
+        bugs: [
+          { id:"B-1", title:"Błędny status powiadomień", env:"staging", status:"Otwarty", steps:"1) Wejdź w ustawienia\n2) Włącz push\n3) Odśwież", assignee:"U-2" }
+        ],
+        secrets: [
+          { id:"S-1", name:"API – Velorie Core", type:"API", owner:"U-ADMIN", expires:"2026-03-01", note:"Token trzymamy w 1Password. Tu tylko meta." },
+          { id:"S-2", name:"Staging – SSH", type:"Serwer", owner:"U-ADMIN", expires:"", note:"Dostęp przez bastion." }
+        ],
+        docs: [
+          { id:"D-1", title:"Onboarding", body:"Kroki: dostęp do repo, środowisko, zasady PR, checklisty release.", tags:["onboarding"] },
+          { id:"D-2", title:"Konwencje kodu", body:"Nazewnictwo, lint, format, branch strategy, commits.", tags:["dev"] }
+        ],
+        assets: [
+          { id:"A-1", name:"Logo Velorie", type:"logo", version:"1.0", rules:"Nie zmieniać proporcji. Accent #ff0354.", url:"https://i.imgur.com/ikYb7tH.png" }
+        ],
+        releases: [
+          { id:"R-1", version:"v1.0.0", date:"2025-12-20", notes:["Start MVP", "Login + dashboard", "Tasks board"], status:"wydane" }
+        ],
+        automations: [
+          { id:"Z-1", name:"PR merged → Done", active:true, rule:"Gdy PR merged w main i ma #TASK-ID, ustaw zadanie Done." }
+        ],
+        activity: []
+      };
+      saveDB(db);
+      return db;
+    }
+
+    function saveDB(db) {
+      localStorage.setItem(LS.db, JSON.stringify(db));
+    }
+
+    function loadSession() {
+      const raw = localStorage.getItem(LS.session);
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch(e) { return null; }
+    }
+    function saveSession(sess) {
+      localStorage.setItem(LS.session, JSON.stringify(sess));
+    }
+    function clearSession() {
+      localStorage.removeItem(LS.session);
+    }
+
+    // =========================
+    //  UI helpers
+    // =========================
+    const $ = (q, el=document) => el.querySelector(q);
+    const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
+
+    function toast(msg, type="info") {
+      const t = document.createElement("div");
+      t.className = "p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-lg flex items-start gap-3";
+      const icon = type==="ok" ? "check-circle2" : type==="warn" ? "alert-triangle" : "info";
+      t.innerHTML = `
+        <div class="mt-0.5 h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+          <i data-lucide="${icon}" class="h-5 w-5 ${type==="ok" ? "text-emerald-400" : type==="warn" ? "text-yellow-400" : "text-[var(--accent)]"}"></i>
+        </div>
+        <div class="flex-1">
+          <div class="text-sm font-semibold">${msg}</div>
+          <div class="text-xs text-white/60 mt-0.5">VelorieTeam</div>
+        </div>
+      `;
+      $("#toasts").appendChild(t);
+      lucide.createIcons();
+      setTimeout(() => { t.style.opacity="0"; t.style.transform="translateY(6px)"; t.style.transition="all .25s"; }, 2400);
+      setTimeout(() => t.remove(), 2800);
+    }
+
+    function card(title, subtitle, innerHtml) {
+      return `
+        <div class="p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="text-lg font-bold">${title}</div>
+              ${subtitle ? `<div class="text-sm text-white/60 mt-1">${subtitle}</div>` : ""}
+            </div>
+          </div>
+          <div class="mt-4">${innerHtml}</div>
+        </div>
+      `;
+    }
+
+    function pill(text, kind="default") {
+      const cls = kind==="ok"
+        ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+        : kind==="warn"
+          ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
+          : kind==="bad"
+            ? "bg-red-500/10 text-red-300 border-red-500/20"
+            : "bg-white/5 text-white/80 border-white/10";
+      return `<span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold border ${cls}">${text}</span>`;
+    }
+
+    function modalOpen({title, sub="", bodyHtml=""}) {
+      $("#modal-title").textContent = title;
+      $("#modal-sub").textContent = sub;
+      $("#modal-body").innerHTML = bodyHtml;
+      $("#modal").classList.remove("hidden");
+      lucide.createIcons();
+    }
+    function modalClose() {
+      $("#modal").classList.add("hidden");
+      $("#modal-body").innerHTML = "";
+    }
+
+    function setActiveNav(hash) {
+      $$("#nav a").forEach(a => a.classList.remove("bg-white/10","text-white","font-semibold"));
+      $$("#nav a").forEach(a => {
+        if (a.getAttribute("href") === hash) {
+          a.classList.add("bg-white/10","text-white","font-semibold");
+        }
+      });
+      $$("#nav-mobile a").forEach(a => a.classList.remove("bg-white/10","text-white","font-semibold"));
+      $$("#nav-mobile a").forEach(a => {
+        if (a.getAttribute("href") === hash) {
+          a.classList.add("bg-white/10","text-white","font-semibold");
+        }
+      });
+      // bottom nav active
+      $$("#bottom-nav a").forEach(a => a.classList.remove("bg-white/10","text-white","font-semibold"));
+      $$("#bottom-nav a").forEach(a => {
+        if (a.getAttribute("href") === hash) {
+          a.classList.add("bg-white/10","text-white","font-semibold");
+        }
+      });
+    }
+
+    function createParticles() {
+      const container = $("#particles-container");
+      if (!container) return;
+      const particleCount = 28;
+      for (let i=0; i<particleCount; i++) {
+        const p = document.createElement("span");
+        const size = 24 + (i % 5) * 12;
+        p.className = "absolute rounded-full opacity-20 blur-2xl particle";
+        p.style.width = size + "px";
+        p.style.height = size + "px";
+        p.style.background = i % 3 ? "var(--accent)" : "#4f46e5";
+        p.style.left = (Math.random() * 100) + "%";
+        p.style.top = (Math.random() * 100) + "%";
+        p.style.animationDuration = (10 + (i % 5)) + "s";
+        p.style.animationDelay = (i * 0.2) + "s";
+        container.appendChild(p);
+      }
+    }
+
+    function requestPush() {
+      if (!("Notification" in window)) {
+        toast("Twoja przeglądarka nie wspiera powiadomień.", "warn");
+        return;
+      }
+      Notification.requestPermission().then(p => {
+        if (p === "granted") {
+          toast("Powiadomienia włączone ✅", "ok");
+          try { new Notification("VelorieTeam", { body: "Push działa (demo).", icon: "https://i.imgur.com/ikYb7tH.png" }); } catch (e) {}
+        } else {
+          toast("Brak zgody na powiadomienia.", "warn");
+        }
+      });
+    }
+
+    // =========================
+    //  Auth
+    // =========================
+    function isAuthed() {
+      const s = loadSession();
+      return !!(s && s.userId);
+    }
+
+    function getCurrentUser(db) {
+      const s = loadSession();
+      if (!s) return null;
+      return db.users.find(u => u.id === s.userId) || null;
+    }
+
+    function loginAdmin(login, pass) {
+      // MVP: porównanie lokalne
+      if (login === ADMIN_LOGIN && pass === ADMIN_PASSWORD) {
+        return { id:"U-ADMIN", role:"admin" };
+      }
+      return null;
+    }
+
+    // =========================
+    //  Views
+    // =========================
+    function viewLogin() {
+      $("#top-subtitle").textContent = "Zaloguj się";
+      $("#btn-logout").classList.add("hidden");
+      $("#btn-logout-m").classList.add("hidden");
+      $("#sidebar-hello").textContent = "Witaj 👋";
+      $("#sidebar-meta").textContent = "Zaloguj się do panelu";
+      $("#drawer-hello").textContent = "Witaj 👋";
+      $("#drawer-sub").textContent = "Zaloguj się do panelu";
+
+      const html = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          ${card(
+            "Logowanie",
+            "Dostęp tylko dla zespołu. W produkcji autoryzacja powinna być po API (ENV na backendzie).",
+            `
+              <div class="space-y-4">
+                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="flex items-start gap-3">
+                    <div class="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                      <i data-lucide="shield" class="h-5 w-5 text-[var(--accent)]"></i>
+                    </div>
+                    <div>
+                      <div class="text-sm font-semibold">Admin (demo)</div>
+                      <div class="text-xs text-white/60 mt-1">Login/hasło są placeholderem w JS. Docelowo: ENV → backend → JWT.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-white/80 mb-2">Login</label>
+                  <input id="login-user" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. admin" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-white/80 mb-2">Hasło</label>
+                  <input id="login-pass" type="password" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="••••••" />
+                </div>
+
+                <button id="btn-login" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-3 font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
+                  <i data-lucide="log-in" class="h-5 w-5"></i>
+                  <span>Zaloguj</span>
+                </button>
+
+                <div class="text-xs text-white/60">
+                  Tip: Po zalogowaniu masz role, projekty, backlog, bugi, docs, release i więcej.
+                </div>
+              </div>
+            `
+          )}
+
+          ${card(
+            "Co tu jest w MVP",
+            "Na start: struktura + UI/UX pod mobile, dane trzymane lokalnie (localStorage).",
+            `
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="flex items-center gap-2 text-sm font-semibold">
+                    <i data-lucide="users" class="h-4 w-4 text-[var(--accent)]"></i> Zespół & role
+                  </div>
+                  <div class="text-xs text-white/60 mt-1">Role, dostępność, mini-permisje (np. Dostępy tylko admin).</div>
+                </div>
+                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="flex items-center gap-2 text-sm font-semibold">
+                    <i data-lucide="check-square" class="h-4 w-4 text-[var(--accent)]"></i> Zadania / backlog
+                  </div>
+                  <div class="text-xs text-white/60 mt-1">Kolumny ToDo → Done, priorytety, deadline, checklisty.</div>
+                </div>
+                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="flex items-center gap-2 text-sm font-semibold">
+                    <i data-lucide="layers" class="h-4 w-4 text-[var(--accent)]"></i> Projekty
+                  </div>
+                  <div class="text-xs text-white/60 mt-1">Status, członkowie, stack, linki (repo/Figma/staging).</div>
+                </div>
+                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="flex items-center gap-2 text-sm font-semibold">
+                    <i data-lucide="bug" class="h-4 w-4 text-[var(--accent)]"></i> Bug tracker
+                  </div>
+                  <div class="text-xs text-white/60 mt-1">Env, kroki reprodukcji, status naprawy.</div>
+                </div>
+              </div>
+            `
+          )}
+        </div>
+      `;
+      $("#view").innerHTML = html;
+
+      $("#btn-login").onclick = () => {
+        const u = ($("#login-user").value || "").trim();
+        const p = ($("#login-pass").value || "").trim();
+        const ok = loginAdmin(u, p);
+        if (!ok) return toast("Błędny login lub hasło.", "warn");
+
+        const db = loadDB();
+        const user = db.users.find(x => x.id === ok.id);
+        if (!user) return toast("Brak konta admin w DB.", "warn");
+
+        saveSession({ userId: user.id, role: user.role, ts: Date.now() });
+        toast("Zalogowano ✅", "ok");
+        location.hash = "#/dashboard";
+        render();
+      };
+
+      lucide.createIcons();
+    }
+
+    function canSee(item, user) {
+      if (!user) return false;
+      if (item.adminOnly && user.role !== "admin") return false;
+      return true;
+    }
+
+    function renderNav(user) {
+      const nav = $("#nav");
+      const navM = $("#nav-mobile");
+      nav.innerHTML = "";
+      navM.innerHTML = "";
+
+      const list = NAV_ITEMS.filter(it => it.mobile !== false).filter(it => canSee(it, user));
+      list.forEach(it => {
+        const a = document.createElement("a");
+        a.href = it.hash;
+        a.className = "flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition";
+        a.innerHTML = `<i data-lucide="${it.icon}" class="h-5 w-5 ${it.key==="secrets" ? "text-[var(--accent)]" : ""}"></i><span>${it.label}</span>`;
+        nav.appendChild(a);
+
+        const am = a.cloneNode(true);
+        am.onclick = () => closeDrawer();
+        navM.appendChild(am);
+      });
+
+      // Bottom nav – tylko 5
+      const bottom = $("#bottom-nav > div");
+      bottom.innerHTML = "";
+      const bottomItems = NAV_ITEMS.filter(it => it.bottom).filter(it => canSee(it, user)).slice(0,5);
+      bottomItems.forEach(it => {
+        const a = document.createElement("a");
+        a.href = it.hash;
+        a.className = "px-3 py-2 rounded-xl bg-white/0 hover:bg-white/5 transition flex flex-col items-center justify-center gap-1 text-white/70";
+        a.innerHTML = `<i data-lucide="${it.icon}" class="h-5 w-5"></i><span class="text-[11px]">${it.label}</span>`;
+        bottom.appendChild(a);
+      });
+
+      lucide.createIcons();
+    }
+
+    function headerUserUI(user) {
+      $("#btn-logout").classList.toggle("hidden", !user);
+      $("#btn-logout-m").classList.toggle("hidden", !user);
+
+      if (!user) {
+        $("#top-subtitle").textContent = "Zaloguj się";
+        $("#sidebar-hello").textContent = "Witaj 👋";
+        $("#sidebar-meta").textContent = "Zaloguj się do panelu";
+        $("#drawer-hello").textContent = "Witaj 👋";
+        $("#drawer-sub").textContent = "Zaloguj się do panelu";
+        return;
+      }
+
+      $("#top-subtitle").textContent = `${user.name} • ${user.role.toUpperCase()} • ${user.status}`;
+      $("#sidebar-hello").textContent = `Witaj, ${user.name} 👋`;
+      $("#sidebar-meta").textContent = `Rola: ${user.role} • Status: ${user.status}`;
+      $("#drawer-hello").textContent = `Witaj, ${user.name} 👋`;
+      $("#drawer-sub").textContent = `Rola: ${user.role} • Status: ${user.status}`;
+      $("#drawer-meta").textContent = "Menu";
+    }
+
+    function viewDashboard(db, user) {
+      const tasks = db.tasks;
+      const projects = db.projects;
+      const bugs = db.bugs;
+
+      const done = tasks.filter(t => t.status === "Done").length;
+      const inprog = tasks.filter(t => t.status === "In Progress").length;
+      const todo = tasks.filter(t => t.status === "ToDo").length;
+      const review = tasks.filter(t => t.status === "Review").length;
+
+      const activeProjects = projects.filter(p => p.state === "aktywny").length;
+      const openBugs = bugs.filter(b => b.status !== "Zamknięty").length;
+
+      const workload = db.users.map(u => ({
+        user: u,
+        count: tasks.filter(t => t.assignee === u.id && ["ToDo","In Progress","Review"].includes(t.status)).length
+      })).sort((a,b) => b.count - a.count);
+
+      $("#view").innerHTML = `
+        <div class="space-y-6">
+          <div>
+            <h1 class="text-3xl font-bold">Dashboard</h1>
+            <p class="text-white/60 mt-1">Szybki podgląd stanu zespołu, projektów i backlogu.</p>
+          </div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+              <div class="text-xs text-white/60">Projekty aktywne</div>
+              <div class="text-2xl font-bold mt-1">${activeProjects}</div>
+            </div>
+            <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+              <div class="text-xs text-white/60">Otwarte bugi</div>
+              <div class="text-2xl font-bold mt-1">${openBugs}</div>
+            </div>
+            <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+              <div class="text-xs text-white/60">Zadania w toku</div>
+              <div class="text-2xl font-bold mt-1">${inprog + review}</div>
+            </div>
+            <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+              <div class="text-xs text-white/60">Zamknięte</div>
+              <div class="text-2xl font-bold mt-1">${done}</div>
+            </div>
+          </div>
+
+          ${card(
+            "Backlog – statusy",
+            "ToDo / In Progress / Review / Done",
+            `
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="text-xs text-white/60">ToDo</div>
+                  <div class="text-xl font-bold mt-1">${todo}</div>
+                </div>
+                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="text-xs text-white/60">In Progress</div>
+                  <div class="text-xl font-bold mt-1">${inprog}</div>
+                </div>
+                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="text-xs text-white/60">Review</div>
+                  <div class="text-xl font-bold mt-1">${review}</div>
+                </div>
+                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="text-xs text-white/60">Done</div>
+                  <div class="text-xl font-bold mt-1">${done}</div>
+                </div>
+              </div>
+            `
+          )}
+
+          ${card(
+            "Workload zespołu",
+            "Ile otwartych zadań ma każda osoba",
+            `
+              <div class="space-y-2">
+                ${workload.map(w => `
+                  <div class="p-3 rounded-2xl border border-white/10 bg-black/30 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                      <div class="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                        <i data-lucide="user" class="h-4 w-4 text-[var(--accent)]"></i>
+                      </div>
+                      <div>
+                        <div class="text-sm font-semibold">${w.user.name} <span class="text-white/60 font-normal">• ${w.user.role}</span></div>
+                        <div class="text-xs text-white/60">Status: ${w.user.status}</div>
+                      </div>
+                    </div>
+                    <div class="text-sm font-bold">${w.count}</div>
+                  </div>
+                `).join("")}
+              </div>
+            `
+          )}
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function viewTeam(db, user) {
+      const options = ["online","focus","urlop"];
+      const roleOptions = ["dev","designer","pm","admin"];
+
+      const list = db.users.map(u => `
+        <div class="p-4 rounded-2xl border border-white/10 bg-black/30 flex items-start justify-between gap-3">
+          <div class="flex items-start gap-3">
+            <div class="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <i data-lucide="user" class="h-5 w-5 ${u.role==="admin" ? "text-[var(--accent)]" : ""}"></i>
+            </div>
+            <div>
+              <div class="text-sm font-semibold">${u.name}</div>
+              <div class="text-xs text-white/60 mt-0.5">${u.email} • ${u.id}</div>
+              <div class="flex flex-wrap gap-2 mt-2">
+                ${pill(u.role.toUpperCase(), u.role==="admin" ? "ok" : "default")}
+                ${pill(u.status, u.status==="online" ? "ok" : u.status==="focus" ? "warn" : "bad")}
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="btn-edit-user inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${u.id}">
+              <i data-lucide="pencil" class="h-4 w-4"></i>
+              <span>Edytuj</span>
+            </button>
+          </div>
+        </div>
+      `).join("");
+
+      $("#view").innerHTML = `
+        <div class="space-y-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h1 class="text-3xl font-bold">Zespół & role</h1>
+              <p class="text-white/60 mt-1">Konta użytkowników, role, dostępność (online/focus/urlop).</p>
+            </div>
+            ${user.role==="admin" ? `
+              <button id="btn-add-user" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
+                <i data-lucide="user-plus" class="h-5 w-5"></i>
+                <span>Dodaj</span>
+              </button>
+            ` : ""}
+          </div>
+
+          ${card("Użytkownicy", user.role==="admin" ? "Admin może dodawać i zarządzać kontami (demo)." : "Tylko podgląd (demo).", `
+            <div class="space-y-3">${list}</div>
+          `)}
+        </div>
+      `;
+
+      // handlers
+      $$(".btn-edit-user").forEach(btn => {
+        btn.onclick = () => {
+          const id = btn.dataset.id;
+          const u = db.users.find(x => x.id === id);
+          if (!u) return;
+
+          const canEdit = user.role==="admin" || (user.role==="pm" && u.role!=="admin") || (user.id===u.id);
+          if (!canEdit) return toast("Brak uprawnień do edycji tego konta.", "warn");
+
+          modalOpen({
+            title: "Edytuj użytkownika",
+            sub: "Zmieniaj rolę i status dostępności.",
+            bodyHtml: `
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Imię</label>
+                  <input id="m-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${u.name}">
+                </div>
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Email</label>
+                  <input id="m-email" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${u.email}">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Rola</label>
+                    <select id="m-role" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                      ${roleOptions.map(r => `<option ${u.role===r?"selected":""} value="${r}">${r}</option>`).join("")}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Status</label>
+                    <select id="m-status" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                      ${options.map(s => `<option ${u.status===s?"selected":""} value="${s}">${s}</option>`).join("")}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                  <button id="m-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                  <button id="m-save" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Zapisz</button>
+                </div>
+              </div>
+            `
+          });
+
+          $("#m-cancel").onclick = modalClose;
+          $("#m-save").onclick = () => {
+            const nr = $("#m-role").value;
+            const ns = $("#m-status").value;
+
+            // prosta ochrona: nikt poza adminem nie może dać sobie admina
+            if (user.role !== "admin" && nr === "admin") return toast("Tylko admin może nadawać rolę admin.", "warn");
+            if (u.role === "admin" && user.role !== "admin") return toast("Nie możesz edytować admina.", "warn");
+
+            u.name = ($("#m-name").value||"").trim() || u.name;
+            u.email = ($("#m-email").value||"").trim() || u.email;
+            u.role = nr;
+            u.status = ns;
+
+            saveDB(db);
+            modalClose();
+            toast("Zapisano użytkownika ✅", "ok");
+            viewTeam(db, user);
+            lucide.createIcons();
+          };
+        };
+      });
+
+      if (user.role === "admin") {
+        $("#btn-add-user").onclick = () => {
+          modalOpen({
+            title: "Dodaj użytkownika",
+            sub: "Konto (dev / designer / PM / admin) – demo lokalne.",
+            bodyHtml: `
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Imię</label>
+                  <input id="a-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. Michał">
+                </div>
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Email</label>
+                  <input id="a-email" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. michal@velorie.pl">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Rola</label>
+                    <select id="a-role" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                      ${roleOptions.map(r => `<option value="${r}">${r}</option>`).join("")}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Status</label>
+                    <select id="a-status" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                      ${options.map(s => `<option value="${s}">${s}</option>`).join("")}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                  <button id="a-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                  <button id="a-add" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
+                </div>
+              </div>
+            `
+          });
+          $("#a-cancel").onclick = modalClose;
+          $("#a-add").onclick = () => {
+            const name = ($("#a-name").value||"").trim();
+            const email = ($("#a-email").value||"").trim();
+            if (!name || !email) return toast("Podaj imię i email.", "warn");
+            db.users.unshift({ id: uid("U"), name, email, role: $("#a-role").value, status: $("#a-status").value });
+            saveDB(db);
+            modalClose();
+            toast("Dodano użytkownika ✅", "ok");
+            viewTeam(db, user);
+          };
+        };
+      }
+
+      lucide.createIcons();
+    }
+
+    function viewProjects(db, user) {
+      const usersById = Object.fromEntries(db.users.map(u => [u.id, u]));
+      const list = db.projects.map(p => `
+        <div class="p-4 rounded-2xl border border-white/10 bg-black/30 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-sm font-semibold">${p.name}</div>
+              <div class="text-xs text-white/60 mt-0.5">${p.id}</div>
+              <div class="flex flex-wrap gap-2 mt-2">
+                ${pill(p.state, p.state==="aktywny" ? "ok" : p.state==="wstrzymany" ? "warn" : "bad")}
+                ${pill((p.stack||[]).slice(0,2).join(" • ") + ((p.stack||[]).length>2 ? " +" : ""), "default")}
+              </div>
+            </div>
+            <button class="btn-proj inline-flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${p.id}">
+              <i data-lucide="eye" class="h-4 w-4"></i><span>Szczegóły</span>
+            </button>
+          </div>
+
+          <div class="text-xs text-white/60">Członkowie</div>
+          <div class="flex flex-wrap gap-2">
+            ${p.members.map(id => {
+              const u = usersById[id];
+              if (!u) return "";
+              return `<span class="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs">${u.name}</span>`;
+            }).join("")}
+          </div>
+        </div>
+      `).join("");
+
+      $("#view").innerHTML = `
+        <div class="space-y-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h1 class="text-3xl font-bold">Projekty</h1>
+              <p class="text-white/60 mt-1">Aktywny / wstrzymany / zakończony, członkowie, stack, linki.</p>
+            </div>
+            ${(user.role==="admin" || user.role==="pm") ? `
+              <button id="btn-add-proj" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
+                <i data-lucide="plus" class="h-5 w-5"></i><span>Nowy</span>
+              </button>
+            ` : ""}
+          </div>
+
+          ${card("Lista projektów", "Kliknij „Szczegóły”, aby zobaczyć linki repo/Figma/staging.", `<div class="space-y-3">${list}</div>`)}
+        </div>
+      `;
+
+      $$(".btn-proj").forEach(b => b.onclick = () => {
+        const p = db.projects.find(x => x.id === b.dataset.id);
+        if (!p) return;
+
+        modalOpen({
+          title: p.name,
+          sub: `Status: ${p.state} • ${p.id}`,
+          bodyHtml: `
+            <div class="space-y-4">
+              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                <div class="text-xs text-white/60">Stack</div>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  ${(p.stack||[]).map(s => `<span class="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs">${s}</span>`).join("") || `<span class="text-sm text-white/60">Brak</span>`}
+                </div>
+              </div>
+
+              <div class="p-4 rounded-2xl border border-white/10 bg-black/30 space-y-2">
+                <div class="text-xs text-white/60">Linki</div>
+                ${["repo","figma","domain","staging"].map(k => `
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="text-sm font-semibold">${k.toUpperCase()}</div>
+                    <a class="text-sm text-[var(--accent)] hover:underline break-all" href="${p.links?.[k]||"#"}" target="_blank" rel="noopener">${p.links?.[k] ? p.links[k] : "—"}</a>
+                  </div>
+                `).join("")}
+              </div>
+
+              ${(user.role==="admin" || user.role==="pm") ? `
+                <button id="btn-edit-proj" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition">
+                  <i data-lucide="pencil" class="h-4 w-4"></i><span>Edytuj (MVP)</span>
+                </button>
+              ` : ""}
+            </div>
+          `
+        });
+
+        if ($("#btn-edit-proj")) {
+          $("#btn-edit-proj").onclick = () => {
+            modalOpen({
+              title: "Edytuj projekt",
+              sub: "MVP: podstawowe pola",
+              bodyHtml: `
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Nazwa</label>
+                    <input id="ep-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${p.name}">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Status</label>
+                    <select id="ep-state" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                      ${["aktywny","wstrzymany","zakończony"].map(s => `<option ${p.state===s?"selected":""} value="${s}">${s}</option>`).join("")}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Stack (comma)</label>
+                    <input id="ep-stack" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${(p.stack||[]).join(", ")}">
+                  </div>
+                  <div class="grid grid-cols-1 gap-2">
+                    <input id="ep-repo" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="repo url" value="${p.links?.repo||""}">
+                    <input id="ep-figma" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="figma url" value="${p.links?.figma||""}">
+                    <input id="ep-domain" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="domain url" value="${p.links?.domain||""}">
+                    <input id="ep-staging" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="staging url" value="${p.links?.staging||""}">
+                  </div>
+
+                  <div class="pt-2 flex items-center justify-end gap-2">
+                    <button id="ep-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                    <button id="ep-save" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Zapisz</button>
+                  </div>
+                </div>
+              `
+            });
+            $("#ep-cancel").onclick = modalClose;
+            $("#ep-save").onclick = () => {
+              p.name = ($("#ep-name").value||"").trim() || p.name;
+              p.state = $("#ep-state").value;
+              p.stack = ($("#ep-stack").value||"").split(",").map(s => s.trim()).filter(Boolean);
+              p.links = {
+                repo: ($("#ep-repo").value||"").trim(),
+                figma: ($("#ep-figma").value||"").trim(),
+                domain: ($("#ep-domain").value||"").trim(),
+                staging: ($("#ep-staging").value||"").trim(),
+              };
+              saveDB(db);
+              modalClose();
+              toast("Zapisano projekt ✅", "ok");
+              viewProjects(db, user);
+            };
+          };
+        }
+      });
+
+      if ($("#btn-add-proj")) {
+        $("#btn-add-proj").onclick = () => {
+          modalOpen({
+            title: "Nowy projekt",
+            sub: "MVP: nazwa + status + stack",
+            bodyHtml: `
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Nazwa</label>
+                  <input id="np-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. Nowy projekt">
+                </div>
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Status</label>
+                  <select id="np-state" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                    <option value="aktywny">aktywny</option>
+                    <option value="wstrzymany">wstrzymany</option>
+                    <option value="zakończony">zakończony</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Stack (comma)</label>
+                  <input id="np-stack" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="React, Tailwind, Node">
+                </div>
+                <div class="pt-2 flex items-center justify-end gap-2">
+                  <button id="np-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                  <button id="np-add" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
+                </div>
+              </div>
+            `
+          });
+          $("#np-cancel").onclick = modalClose;
+          $("#np-add").onclick = () => {
+            const name = ($("#np-name").value||"").trim();
+            if (!name) return toast("Podaj nazwę projektu.", "warn");
+            db.projects.unshift({
+              id: uid("P"),
+              name,
+              state: $("#np-state").value,
+              members: [user.id],
+              stack: ($("#np-stack").value||"").split(",").map(s=>s.trim()).filter(Boolean),
+              links: { repo:"", figma:"", domain:"", staging:"" }
+            });
+            saveDB(db);
+            modalClose();
+            toast("Dodano projekt ✅", "ok");
+            viewProjects(db, user);
+          };
+        };
+      }
+
+      lucide.createIcons();
+    }
+
+    function taskCard(t, db) {
+      const u = db.users.find(x => x.id === t.assignee);
+      const due = t.deadline ? new Date(t.deadline) : null;
+      const dueTxt = due ? due.toISOString().slice(0,10) : "—";
+      const prioKind = t.prio==="High" ? "bad" : t.prio==="Medium" ? "warn" : "default";
+      return `
+        <div class="p-3 rounded-2xl border border-white/10 bg-white/5">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="text-sm font-semibold">${t.title}</div>
+              <div class="text-xs text-white/60 mt-0.5">${t.id} • ${u ? u.name : "—"}</div>
+              <div class="flex flex-wrap gap-2 mt-2">
+                ${pill(t.prio, prioKind)}
+                ${pill("Due: " + dueTxt, "default")}
+                ${(t.tags||[]).slice(0,3).map(tag => pill("#"+tag,"default")).join("")}
+              </div>
+            </div>
+            <button class="btn-task rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${t.id}">
+              <i data-lucide="message-circle" class="h-4 w-4"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function viewTasks(db, user) {
+      const cols = ["ToDo","In Progress","Review","Done"];
+      const tasksByCol = Object.fromEntries(cols.map(c => [c, db.tasks.filter(t => t.status === c)]));
+
+      $("#view").innerHTML = `
+        <div class="space-y-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h1 class="text-3xl font-bold">Zadania / backlog</h1>
+              <p class="text-white/60 mt-1">ToDo → In Progress → Review → Done, priorytety, deadline’y, checklisty, tagi.</p>
+            </div>
+            <button id="btn-add-task" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
+              <i data-lucide="plus" class="h-5 w-5"></i><span>Dodaj</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 items-start">
+            ${cols.map(c => `
+              <div class="p-3 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="flex items-center justify-between">
+                  <div class="text-sm font-bold">${c}</div>
+                  <div class="text-xs text-white/60">${tasksByCol[c].length}</div>
+                </div>
+                <div class="mt-3 space-y-3">
+                  ${tasksByCol[c].map(t => taskCard(t, db)).join("") || `<div class="text-xs text-white/60">Brak</div>`}
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+
+      // open task modal
+      $$(".btn-task").forEach(b => b.onclick = () => {
+        const t = db.tasks.find(x => x.id === b.dataset.id);
+        if (!t) return;
+
+        const u = db.users.find(x => x.id === t.assignee);
+        const canEdit = user.role==="admin" || user.role==="pm" || user.id === t.assignee;
+
+        modalOpen({
+          title: t.title,
+          sub: `${t.id} • ${t.status} • ${u ? u.name : "—"}`,
+          bodyHtml: `
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-3">
+                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="text-xs text-white/60">Priorytet</div>
+                  <div class="text-sm font-semibold mt-1">${t.prio}</div>
+                </div>
+                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
+                  <div class="text-xs text-white/60">Deadline</div>
+                  <div class="text-sm font-semibold mt-1">${t.deadline || "—"}</div>
+                </div>
+              </div>
+
+              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                <div class="text-xs text-white/60">Checklist</div>
+                <div class="mt-2 space-y-2">
+                  ${(t.checklist||[]).map((c, i) => `
+                    <label class="flex items-center gap-2 text-sm">
+                      <input class="chk accent-[var(--accent)]" type="checkbox" data-idx="${i}">
+                      <span>${c}</span>
+                    </label>
+                  `).join("") || `<div class="text-sm text-white/60">Brak</div>`}
+                </div>
+              </div>
+
+              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-xs text-white/60">Komentarze</div>
+                  <div class="text-xs text-white/60">${(t.comments||[]).length}</div>
+                </div>
+
+                <div class="mt-3 space-y-2">
+                  ${(t.comments||[]).map(c => `
+                    <div class="p-3 rounded-2xl border border-white/10 bg-white/5">
+                      <div class="text-sm font-semibold">${c.author} <span class="text-xs text-white/60 font-normal">• ${new Date(c.ts).toLocaleString()}</span></div>
+                      <div class="text-sm text-white/80 mt-1 whitespace-pre-wrap">${c.text}</div>
+                    </div>
+                  `).join("") || `<div class="text-sm text-white/60">Brak komentarzy</div>`}
+                </div>
+
+                <div class="mt-3 flex gap-2">
+                  <input id="cmt" class="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Dodaj komentarz… (@wzmianki działają jako tekst)">
+                  <button id="btn-cmt" class="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition">Wyślij</button>
+                </div>
+              </div>
+
+              ${canEdit ? `
+                <div class="grid grid-cols-2 gap-2">
+                  <button id="btn-move" class="rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition inline-flex items-center justify-center gap-2">
+                    <i data-lucide="arrow-right" class="h-4 w-4"></i><span>Przesuń dalej</span>
+                  </button>
+                  <button id="btn-edit" class="rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition inline-flex items-center justify-center gap-2">
+                    <i data-lucide="pencil" class="h-4 w-4"></i><span>Edytuj</span>
+                  </button>
+                </div>
+              ` : `
+                <div class="text-xs text-white/60">Nie masz uprawnień do edycji tego zadania.</div>
+              `}
+            </div>
+          `
+        });
+
+        $("#btn-cmt").onclick = () => {
+          const text = ($("#cmt").value||"").trim();
+          if (!text) return;
+          t.comments = t.comments || [];
+          t.comments.push({ author: user.name, text, ts: Date.now() });
+          saveDB(db);
+          toast("Dodano komentarz ✅", "ok");
+          viewTasks(db, user);
+          modalClose();
+        };
+
+        if ($("#btn-move")) {
+          $("#btn-move").onclick = () => {
+            const order = ["ToDo","In Progress","Review","Done"];
+            const idx = order.indexOf(t.status);
+            t.status = order[Math.min(idx+1, order.length-1)];
+            saveDB(db);
+            toast("Zmieniono status ✅", "ok");
+            viewTasks(db, user);
+            modalClose();
+          };
+        }
+
+        if ($("#btn-edit")) {
+          $("#btn-edit").onclick = () => {
+            modalOpen({
+              title: "Edytuj zadanie",
+              sub: "MVP: tytuł, priorytet, deadline, tagi, przypisanie",
+              bodyHtml: `
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Tytuł</label>
+                    <input id="et-title" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${t.title}">
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs text-white/60 mb-1">Priorytet</label>
+                      <select id="et-prio" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                        ${["Low","Medium","High"].map(p => `<option ${t.prio===p?"selected":""} value="${p}">${p}</option>`).join("")}
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-white/60 mb-1">Deadline</label>
+                      <input id="et-deadline" type="date" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${t.deadline || ""}">
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Assignee</label>
+                    <select id="et-assignee" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                      ${db.users.map(u => `<option ${t.assignee===u.id?"selected":""} value="${u.id}">${u.name} • ${u.role}</option>`).join("")}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs text-white/60 mb-1">Tagi (comma)</label>
+                    <input id="et-tags" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${(t.tags||[]).join(", ")}">
+                  </div>
+
+                  <div class="pt-2 flex items-center justify-end gap-2">
+                    <button id="et-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                    <button id="et-save" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Zapisz</button>
+                  </div>
+                </div>
+              `
+            });
+            $("#et-cancel").onclick = modalClose;
+            $("#et-save").onclick = () => {
+              t.title = ($("#et-title").value||"").trim() || t.title;
+              t.prio = $("#et-prio").value;
+              t.deadline = $("#et-deadline").value || "";
+              t.assignee = $("#et-assignee").value;
+              t.tags = ($("#et-tags").value||"").split(",").map(s=>s.trim()).filter(Boolean);
+              saveDB(db);
+              modalClose();
+              toast("Zapisano zadanie ✅", "ok");
+              viewTasks(db, user);
+            };
+          };
+        }
+      });
+
+      $("#btn-add-task").onclick = () => {
+        modalOpen({
+          title: "Dodaj zadanie",
+          sub: "Szybkie dodanie do ToDo",
+          bodyHtml: `
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-white/60 mb-1">Tytuł</label>
+                <input id="nt-title" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. Integracja GitHub">
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Priorytet</label>
+                  <select id="nt-prio" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                    <option value="Low">Low</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-white/60 mb-1">Deadline</label>
+                  <input id="nt-deadline" type="date" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs text-white/60 mb-1">Assignee</label>
+                <select id="nt-assignee" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                  ${db.users.map(u => `<option value="${u.id}">${u.name} • ${u.role}</option>`).join("")}
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs text-white/60 mb-1">Tagi (comma)</label>
+                <input id="nt-tags" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="frontend, backend, bug, design">
+              </div>
+
+              <div class="pt-2 flex items-center justify-end gap-2">
+                <button id="nt-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                <button id="nt-add" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
+              </div>
+            </div>
+          `
+        });
+        $("#nt-cancel").onclick = modalClose;
+        $("#nt-add").onclick = () => {
+          const title = ($("#nt-title").value||"").trim();
+          if (!title) return toast("Podaj tytuł.", "warn");
+          db.tasks.unshift({
+            id: uid("T"),
+            title,
+            status: "ToDo",
+            prio: $("#nt-prio").value,
+            deadline: $("#nt-deadline").value || "",
+            assignee: $("#nt-assignee").value,
+            tags: ($("#nt-tags").value||"").split(",").map(s=>s.trim()).filter(Boolean),
+            checklist: [],
+            comments: []
+          });
+          saveDB(db);
+          modalClose();
+          toast("Dodano zadanie ✅", "ok");
+          viewTasks(db, user);
+        };
+      };
+
+      lucide.createIcons();
+    }
+
+    function viewBugs(db, user) {
+      const usersById = Object.fromEntries(db.users.map(u => [u.id, u]));
+      const rows = db.bugs.map(b => `
+        <div class="p-4 rounded-2xl border border-white/10 bg-black/30 space-y-2">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-sm font-semibold">${b.title}</div>
+              <div class="text-xs text-white/60 mt-0.5">${b.id} • env: ${b.env} • ${b.status}</div>
+              <div class="flex flex-wrap gap-2 mt-2">
+                ${pill(b.env, b.env==="prod" ? "bad" : "warn")}
+                ${pill(b.status, b.status==="Otwarty" ? "warn" : b.status==="W naprawie" ? "warn" : "ok")}
+                ${pill("Assignee: " + (usersById[b.assignee]?.name || "—"), "default")}
+              </div>
+            </div>
+            <button class="btn-bug rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${b.id}">
+              <i data-lucide="file-text" class="h-4 w-4"></i>
+            </button>
+          </div>
+        </div>
+      `).join("");
+
+      $("#view").innerHTML = `
+        <div class="space-y-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h1 class="text-3xl font-bold">Bug tracker</h1>
+              <p class="text-white/60 mt-1">Zgłoszenia, środowisko (prod/staging), kroki reprodukcji, status naprawy.</p>
+            </div>
+            <button id="btn-add-bug" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
+              <i data-lucide="plus" class="h-5 w-5"></i><span>Zgłoś</span>
+            </button>
+          </div>
+
+          ${card("Lista zgłoszeń", "Kliknij szczegóły aby zobaczyć kroki reprodukcji.", `<div class="space-y-3">${rows || `<div class="text-sm text-white/60">Brak zgłoszeń</div>`}</div>`)}
+        </div>
+      `;
+
+      $$(".btn-bug").forEach(btn => btn.onclick = () => {
+        const b = db.bugs.find(x => x.id === btn.dataset.id);
+        if (!b) return;
+        modalOpen({
+          title: b.title,
+          sub: `${b.id} • ${b.env} • ${b.status}`,
+          bodyHtml: `
+            <div class="space-y-3">
+              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                <div class="text-xs text-white/60">Kroki reprodukcji</div>
+                <pre class="mt-2 whitespace-pre-wrap text-sm text-white/80">${b.steps || "—"}</pre>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <button id="b-status" class="rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition">Zmień status</button>
+                <button id="b-assign" class="rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition">Przypisz</button>
+              </div>
+            </div>
+          `
+        });
+
+        $("#b-status").onclick = () => {
+          const order = ["Otwarty","W naprawie","Do testów","Zamknięty"];
+          const idx = order.indexOf(b.status);
+          b.status = order[Math.min(idx+1, order.length-1)];
+          saveDB(db);
+          toast("Zmieniono status ✅", "ok");
+          modalClose();
+          viewBugs(db, user);
+        };
+
+        $("#b-assign").onclick = () => {
+          modalOpen({
+            title: "Przypisz buga",
+            sub: "Wybierz osobę z zespołu",
+            bodyHtml: `
+              <div class="space-y-3">
+                <select id="ba" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                  ${db.users.map(u => `<option ${b.assignee===u.id?"selected":""} value="${u.id}">${u.name} • ${u.role}</option>`).join("")}
+                </select>
+                <div class="flex justify-end gap-2">
+                  <button id="bac" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                  <button id="bas" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Zapisz</button>
+                </div>
+              </div>
+            `
+          });
+          $("#bac").onclick = modalClose;
+          $("#bas").onclick = () => {
+            b.assignee = $("#ba").value;
+            saveDB(db);
+            modalClose();
+            toast("Przypisano ✅", "ok");
+            viewBugs(db, user);
+          };
+        };
+      });
+
+      $("#btn-add-bug").onclick = () => {
+        modalOpen({
+          title: "Zgłoś błąd",
+          sub: "MVP: tytuł + env + kroki",
+          bodyHtml: `
+            <div class="space-y-3">
+              <input id="nb-title" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Tytuł buga">
+              <select id="nb-env" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                <option value="prod">prod</option>
+                <option value="staging" selected>staging</option>
+              </select>
+              <textarea id="nb-steps" rows="5" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Kroki reprodukcji…"></textarea>
+              <div class="flex justify-end gap-2">
+                <button id="nb-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                <button id="nb-add" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
+              </div>
+            </div>
+          `
+        });
+        $("#nb-cancel").onclick = modalClose;
+        $("#nb-add").onclick = () => {
+          const title = ($("#nb-title").value||"").trim();
+          if (!title) return toast("Podaj tytuł.", "warn");
+          db.bugs.unshift({
+            id: uid("B"),
+            title,
+            env: $("#nb-env").value,
+            status: "Otwarty",
+            steps: ($("#nb-steps").value||"").trim(),
+            assignee: user.id
+          });
+          saveDB(db);
+          modalClose();
+          toast("Dodano zgłoszenie ✅", "ok");
+          viewBugs(db, user);
+        };
+      };
+
+      lucide.createIcons();
+    }
+
+    function viewSecrets(db, user) {
+      const perms = ROLE_PERMS[user.role] || {};
+      if (!perms.canSeeSecrets) {
+        $("#view").innerHTML = `
+          <div class="space-y-6">
+            ${card("Dostępy & sekrety", "Tylko admin ma wgląd (bez haseł!).", `
+              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
+                <div class="text-sm font-semibold">Brak dostępu</div>
+                <div class="text-sm text-white/60 mt-1">Ten moduł jest widoczny tylko dla admina.</div>
+              </div>
+            `)}
+          </div>
+        `;
+        return;
+      }
+
+      const rows = db.secrets.map(s => `
+        <div class="p-4 rounded-2xl border border-white/10 bg-black/30 flex items-start justify-between gap-3">
+          <div>
+            <div class="text-sm font-semibold">${s.name}</div>
+            <div class="text-xs text-white/60 mt-0.5">${s.id} • typ: ${s.type} • właściciel: ${(db.users.find(u => u.id===s.owner)?.name || "—")}</div>
+            <div class="flex flex-wrap gap-2 mt-2">
+              ${pill("wygasa: " + (s.expires || "—"), s.expires ? "warn" : "default")}
+              ${pill("bez haseł", "ok")}
+            </div>
+            <div class="text-sm text-white/70 mt-2">${s.note || ""}</div>
+          </div>
+          <button class="btn-del-secret rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${s.id}">
+            <i data-lucide="trash-2" class="h-4 w-4"></i>
+          </button>
+        </div>
+      `).join("");
+
+      $("#view").innerHTML = `
+        <div class="space-y-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h1 class="text-3xl font-bold">Dostępy & sekrety</h1>
+              <p class="text-white/60 mt-1">Lista dostępów (API/serwery) – bez haseł. Tylko meta + kto ma dostęp.</p>
+            </div>
+            <button id="btn-add-secret" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
+              <i data-lucide="plus" class="h-5 w-5"></i><span>Dodaj</span>
+            </button>
+          </div>
+
+          ${card("Dostępy", "W idealnym świecie to jest integracja z menedżerem haseł; tu tylko metadata.", `<div class="space-y-3">${rows || `<div class="text-sm text-white/60">Brak wpisów</div>`}</div>`)}
+        </div>
+      `;
+
+      $$(".btn-del-secret").forEach(btn => btn.onclick = () => {
+        const id = btn.dataset.id;
+        db.secrets = db.secrets.filter(s => s.id !== id);
+        saveDB(db);
+        toast("Usunięto wpis ✅", "ok");
+        viewSecrets(db, user);
+      });
+
+      $("#btn-add-secret").onclick = () => {
+        modalOpen({
+          title: "Dodaj dostęp",
+          sub: "Bez haseł – tylko opis, kto ma dostęp, wygasanie.",
+          bodyHtml: `
+            <div class="space-y-3">
+              <input id="ns-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Nazwa">
+              <select id="ns-type" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                <option value="API">API</option>
+                <option value="Serwer">Serwer</option>
+                <option value="Panel">Panel</option>
+              </select>
+              <select id="ns-owner" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                ${db.users.map(u => `<option value="${u.id}">${u.name} • ${u.role}</option>`).join("")}
+              </select>
+              <input id="ns-exp" type="date" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" />
+              <textarea id="ns-note" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Notatka (meta)"></textarea>
+              <div class="flex justify-end gap-2">
+                <button id="ns-c" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
+                <button id="ns-a" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
+              </div>
+            </div>
+          `
+        });
+        $("#ns-c").onclick = modalClose;
+        $("#ns-a").onclick = () => {
+          const name = ($("#ns-name").value||"").trim();
+          if (!name) return toast("Podaj nazwę.", "warn");
+          db.secrets.unshift({
+            id: uid("S"),
+            name,
+            type: $("#ns-type").value,
+            owner: $("#ns-owner").value,
+            expires: $("#ns-exp").value || "",
+            note: ($("#ns-note").value||"").trim()
+          });
+          saveDB(db);
+          modalClose();
+          toast("Dodano dostęp ✅", "ok");
+          viewSecrets(db, user);
+        };
+      };
+
+      lucide.createIcons();
+    }
+
+    function viewSimple(title, subtitle, icon, blocks) {
+      $("#view").innerHTML = `
+        <div class="space-y-6">
+          <div>
+            <h1 class="text-3xl font-bold">${title}</h1>
+            <p class="text-white/60 mt-1">${subtitle}</p>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            ${blocks.map(b => `
+              <div class="p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="flex items-start gap-3">
+                  <div class="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <i data-lucide="${b.icon || icon}" class="h-5 w-5 text-[var(--accent)]"></i>
+                  </div>
+                  <div>
+                    <div class="text-sm font-semibold">${b.title}</div>
+                    <div class="text-sm text-white/60 mt-1">${b.text}</div>
+                  </div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function route(db, user) {
+      const hash = location.hash || "#/";
+      const h = hash.replace("#/", "");
+      setActiveNav("#/" + (h || ""));
+
+      // if not authed -> login
+      if (!user) {
+        viewLogin();
+        return;
+      }
+
+      if (hash === "#/" || hash === "#/dashboard") return viewDashboard(db, user);
+      if (hash === "#/team") return viewTeam(db, user);
+      if (hash === "#/projects") return viewProjects(db, user);
+      if (hash === "#/tasks") return viewTasks(db, user);
+      if (hash === "#/bugs") return viewBugs(db, user);
+      if (hash === "#/secrets") return viewSecrets(db, user);
+
+      if (hash === "#/git") {
+        return viewSimple(
+          "Integracje Git",
+          "MVP: miejsce na GitHub/GitLab, PR-y, commity, statusy CI.",
+          "git-branch",
+          [
+            { title:"Podpięcie GitHub / GitLab", text:"Docelowo OAuth + tokeny serwerowe. Tu tylko UI placeholder.", icon:"plug" },
+            { title:"Commity i PR-y", text:"Lista PR-ów, linkowanie commit ↔ zadanie (#T-123).", icon:"git-pull-request" },
+            { title:"CI / build status", text:"Podgląd pipeline (success/fail), badge w projekcie.", icon:"activity" },
+            { title:"Automaty: PR merged → Done", text:"Hooki (webhook) + reguły statusów.", icon:"zap" },
+          ]
+        );
+      }
+
+      if (hash === "#/comms") {
+        return viewSimple(
+          "Komunikacja",
+          "Komentarze, @wzmianki, powiadomienia web/push/mail.",
+          "messages-square",
+          [
+            { title:"Komentarze pod zadaniami", text:"Masz już w zadaniach – rozbudujesz o wątki, reakcje.", icon:"message-circle" },
+            { title:"@wzmianki", text:"MVP: tekst. Produkcja: parsing + powiadomienia.", icon:"at-sign" },
+            { title:"Powiadomienia", text:"Web + push (demo). Mail po backendzie.", icon:"bell" },
+            { title:"Realtime", text:"Socket.IO / WebSocket pod czat i eventy.", icon:"radio" },
+          ]
+        );
+      }
+
+      if (hash === "#/design") {
+        return viewSimple(
+          "Design hub",
+          "Figma / Adobe / assets, wersje makiet, status akceptacji.",
+          "palette",
+          [
+            { title:"Linki Figma/Adobe", text:"Dodaj per projekt, z dostępami tylko do zespołu.", icon:"link" },
+            { title:"Wersjonowanie makiet", text:"v1/v2 + changelog do decyzji.", icon:"git-commit" },
+            { title:"Komentarze do designu", text:"Powiąż z zadaniami i PR-ami.", icon:"message-square" },
+            { title:"Status akceptacji", text:"Do akceptacji / Zaakceptowane.", icon:"stamp" },
+          ]
+        );
+      }
+
+      if (hash === "#/assets") {
+        return viewSimple(
+          "Asset manager",
+          "Logo, ikony, ilustracje, wersje i zasady użycia.",
+          "images",
+          [
+            { title:"Pliki + wersje", text:"W produkcji: upload + storage + checksum.", icon:"file-up" },
+            { title:"Brand book", text:"Zasady użycia, marginesy, kolory, typografia.", icon:"book-open" },
+            { title:"Podgląd", text:"Miniatury + tagi + filtrowanie.", icon:"scan" },
+            { title:"Uprawnienia", text:"Kto może dodawać/usuwać.", icon:"shield-check" },
+          ]
+        );
+      }
+
+      if (hash === "#/docs") {
+        return viewSimple(
+          "Wiki / Docs",
+          "Dokumentacja, onboarding, konwencje, checklisty release.",
+          "book-text",
+          [
+            { title:"Onboarding", text:"Kroki wejścia do zespołu + dostęp do repo i narzędzi.", icon:"graduation-cap" },
+            { title:"Konwencje kodu", text:"lint/format/branch strategy/commit rules.", icon:"braces" },
+            { title:"Checklisty release", text:"QA, migracje, backup, deploy, monitoring.", icon:"clipboard-check" },
+            { title:"Search", text:"W produkcji: full-text search + tagi.", icon:"search" },
+          ]
+        );
+      }
+
+      if (hash === "#/snippets") {
+        return viewSimple(
+          "Snippety & wzorce",
+          "Boilerplate’y, best practices, gotowe fragmenty kodu.",
+          "braces",
+          [
+            { title:"Snippet library", text:"Tagi: frontend/backend/bug/design/devops.", icon:"code" },
+            { title:"Boilerplate", text:"Nowy projekt? Odpalasz template + checklistę.", icon:"package" },
+            { title:"Best practices", text:"Wewnętrzne standardy zespołu.", icon:"badge-check" },
+            { title:"AI helper", text:"Generowanie dokumentacji z kodu (docstrings).", icon:"sparkles" },
+          ]
+        );
+      }
+
+      if (hash === "#/releases") {
+        return viewSimple(
+          "Release manager",
+          "Lista wersji, changelog, co idzie na produkcję.",
+          "rocket",
+          [
+            { title:"Wersje i changelog", text:"Zadania + PR-y spięte z release.", icon:"tag" },
+            { title:"Scope produkcji", text:"Lista rzeczy, które idą na deploy.", icon:"list-checks" },
+            { title:"Checklisty", text:"QA/monitoring/rollback plan.", icon:"shield-alert" },
+            { title:"Automaty", text:"Po deploy → update statusów.", icon:"zap" },
+          ]
+        );
+      }
+
+      if (hash === "#/automation") {
+        return viewSimple(
+          "Automatyzacje",
+          "Webhooki i reguły, które oszczędzają czas.",
+          "zap",
+          [
+            { title:"PR merged → Done", text:"Reguły po webhookach.", icon:"git-merge" },
+            { title:"Nowy bug → dyżurny", text:"Rotacja dyżuru + przypisanie.", icon:"user-cog" },
+            { title:"Integracje", text:"Discord/Slack/email/push.", icon:"link" },
+            { title:"Event bus", text:"Socket.IO events w panelu.", icon:"radio" },
+          ]
+        );
+      }
+
+      if (hash === "#/ai") {
+        return viewSimple(
+          "AI asystent zespołu",
+          "Podsumowania sprintu, auto-opisy, code review hints, docs generator.",
+          "sparkles",
+          [
+            { title:"Sprint summary", text:"Agregacja done/in-progress + highlight ryzyk.", icon:"clipboard-list" },
+            { title:"Auto-opisy zadań", text:"Z krótkiego promptu do pełnego opisu + checklist.", icon:"wand-2" },
+            { title:"Code review suggestions", text:"Wykrywanie ryzyk, styl, testy.", icon:"search-check" },
+            { title:"Generowanie dokumentacji", text:"Z README/komentarzy do docs.", icon:"book-plus" },
+          ]
+        );
+      }
+
+      // fallback
+      viewDashboard(db, user);
+    }
+
+    // =========================
+    //  Drawer
+    // =========================
+    function openDrawer(){ $("#drawer").classList.remove("hidden"); }
+    function closeDrawer(){ $("#drawer").classList.add("hidden"); }
+
+    // =========================
+    //  Render
+    // =========================
+    function render() {
+      const db = loadDB();
+      const user = getCurrentUser(db);
+
+      renderNav(user);
+      headerUserUI(user);
+
+      // logout
+      const doLogout = () => {
+        clearSession();
+        toast("Wylogowano.", "ok");
+        location.hash = "#/";
+        render();
+      };
+
+      $("#btn-logout").onclick = doLogout;
+      $("#btn-logout-m").onclick = doLogout;
+
+      // refresh
+      const doSync = () => {
+        toast("Odświeżono ✅", "ok");
+        render();
+      };
+      $("#btn-sync").onclick = doSync;
+      $("#btn-sync-m").onclick = doSync;
+
+      // push
+      $("#btn-push").onclick = requestPush;
+      $("#btn-push-m").onclick = requestPush;
+
+      // drawer
+      $("#btn-menu").onclick = openDrawer;
+      $("#btn-close-drawer").onclick = closeDrawer;
+      $("#drawer-backdrop").onclick = closeDrawer;
+
+      // modal
+      $("#modal-close").onclick = modalClose;
+      $("#modal-backdrop").onclick = modalClose;
+
+      // route
+      route(db, user);
+
+      // icons
+      lucide.createIcons();
+    }
+
+    // =========================
+    //  Init
+    // =========================
+    document.addEventListener("DOMContentLoaded", () => {
+      createParticles();
+      render();
+      window.addEventListener("hashchange", render);
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
