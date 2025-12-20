@@ -1,12 +1,10 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>VelorieTeam – PWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team Panel – Velorie Style</title>
   <meta name="theme-color" content="#0a1030" />
-  <meta name="description" content="VelorieTeam – panel zespołu: projekty, zadania, bugi, dokumentacja i komunikacja." />
-
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -16,59 +14,130 @@
       background-color:#00010f;
       background-image: radial-gradient(1200px 600px at 80% -10%, #0a1030 0%, #050919 35%, #00010f 65%, #000000 100%);
     }
-    ::-webkit-scrollbar{width:10px;height:10px}
-    ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:999px}
-    ::-webkit-scrollbar-track{background:rgba(255,255,255,.08)}
-    @keyframes particle-animation{
-      0%,100%{transform:translateY(0%) translateX(0%) rotate(0deg)}
-      50%{transform:translateY(-10%) translateX(5%) rotate(20deg)}
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); }
+
+    @keyframes particle-animation {
+      0%, 100% { transform: translateY(0%) translateX(0%) rotate(0deg); }
+      50% { transform: translateY(-10%) translateX(5%) rotate(20deg); }
     }
-    .particle{
-      animation-name:particle-animation;
-      animation-timing-function:ease-in-out;
-      animation-iteration-count:infinite;
-    }
-    /* mobile niceness */
-    .tap { -webkit-tap-highlight-color: transparent; }
+    .particle { animation-name: particle-animation; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+
+    /* smooth */
+    .soft-shadow { box-shadow: 0 18px 55px rgba(0,0,0,.45); }
+    .tap { transform: translateZ(0); }
+    .tap:active { transform: scale(.98); }
+
+    /* kanban drag */
+    .dragging { opacity: .55; transform: rotate(-1deg) scale(.99); }
+    .dropzone { outline: 2px dashed rgba(255,3,84,.55); outline-offset: 6px; }
   </style>
 </head>
 
-<body class="min-h-screen text-white selection:bg-[#ff0354]/40 selection:text-white tap">
+<body class="min-h-screen text-white selection:bg-[#ff0354]/40 selection:text-white">
   <div id="particles-container" aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden z-0"></div>
 
-  <!-- Toasts -->
-  <div id="toasts" class="fixed z-[100] left-3 right-3 bottom-3 space-y-2"></div>
-
-  <!-- App Root -->
-  <div class="relative z-10 min-h-screen">
-    <!-- Topbar -->
-    <header class="sticky top-0 z-50 backdrop-blur-xl bg-black/20 border-b border-white/10">
-      <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
-        <a href="#/" class="flex items-center gap-3">
-          <!-- logo: to samo co w kodzie powyżej -->
-          <img src="https://i.imgur.com/ikYb7tH.png" alt="logo" class="h-10 w-10 rounded-xl ring-1 ring-white/10" />
-          <div class="leading-tight">
-            <div class="text-lg font-semibold tracking-tight">VelorieTeam</div>
-            <div id="top-subtitle" class="text-xs text-white/60">Panel zespołu</div>
+  <!-- LOCKSCREEN -->
+  <div id="lockscreen" class="fixed inset-0 z-[80] grid place-items-center p-4">
+    <div class="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl soft-shadow overflow-hidden">
+      <div class="p-6 border-b border-white/10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-11 w-11 rounded-2xl bg-[var(--accent)]/15 grid place-items-center ring-1 ring-white/10">
+            <i data-lucide="shield" class="h-5 w-5 text-[var(--accent)]"></i>
           </div>
-        </a>
+          <div class="leading-tight">
+            <div class="text-lg font-semibold tracking-tight">Team Panel</div>
+            <div class="text-xs text-white/60">Szybkie logowanie PIN</div>
+          </div>
+        </div>
+        <span class="text-xs font-semibold rounded-full bg-white/5 px-3 py-1 text-white/70 border border-white/10">MVP</span>
+      </div>
 
-        <div class="flex items-center gap-2">
-          <button id="btn-push" class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10 transition">
-            <i data-lucide="bell-ring" class="h-4 w-4 text-[var(--accent)]"></i>
-            <span>Push</span>
+      <div class="p-6 space-y-5">
+        <div class="rounded-2xl border border-white/10 bg-black/25 p-4">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-white/70">Wpisz PIN dostępu</div>
+            <button id="pin-clear" class="tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition">
+              <i data-lucide="delete" class="h-4 w-4"></i> Wyczyść
+            </button>
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <div id="pin-dots" class="flex items-center gap-2">
+              <span class="h-3 w-3 rounded-full bg-white/15 ring-1 ring-white/10"></span>
+              <span class="h-3 w-3 rounded-full bg-white/15 ring-1 ring-white/10"></span>
+              <span class="h-3 w-3 rounded-full bg-white/15 ring-1 ring-white/10"></span>
+              <span class="h-3 w-3 rounded-full bg-white/15 ring-1 ring-white/10"></span>
+              <span class="h-3 w-3 rounded-full bg-white/15 ring-1 ring-white/10"></span>
+            </div>
+            <div class="ml-auto text-xs text-white/60">PIN: <span class="font-mono">*****</span></div>
+          </div>
+          <div id="pin-error" class="hidden mt-3 text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+            Nieprawidłowy PIN.
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <!-- keypad -->
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="1">1</button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="2">2</button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="3">3</button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="4">4</button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="5">5</button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="6">6</button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="7">7</button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="8">8</button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="9">9</button>
+          <button id="pin-back" class="tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-sm flex items-center justify-center gap-2">
+            <i data-lucide="undo-2" class="h-4 w-4"></i> Cofnij
+          </button>
+          <button class="pin-key tap rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 py-4 font-semibold text-lg" data-k="0">0</button>
+          <button id="pin-enter" class="tap rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent)]/20 hover:bg-[var(--accent)]/30 py-4 font-semibold text-sm flex items-center justify-center gap-2">
+            <i data-lucide="log-in" class="h-4 w-4 text-[var(--accent)]"></i> Wejdź
+          </button>
+        </div>
+
+        <div class="text-xs text-white/60 leading-relaxed">
+          UX założenie: panel ma być szybki. Ten ekran to demo — w produkcji PIN/auth powinny być walidowane po stronie backendu.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden relative z-10">
+    <!-- header -->
+    <header class="sticky top-0 z-50 backdrop-blur-xl bg-black/20 border-b border-white/10">
+      <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <div class="h-10 w-10 rounded-xl bg-white/5 ring-1 ring-white/10 grid place-items-center">
+            <i data-lucide="layers" class="h-5 w-5 text-[var(--accent)]"></i>
+          </div>
+          <div class="leading-tight hidden sm:block">
+            <div class="text-lg font-semibold tracking-tight">Team Panel</div>
+            <div class="text-xs text-white/60">Zlecenia • Projekty • Punkty</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="hidden md:flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-medium border border-white/10">
+            <i data-lucide="badge-check" class="h-4 w-4 text-[var(--accent)]"></i>
+            <span id="whoami-role">Manager</span>
+            <span class="text-white/40">•</span>
+            <span id="whoami-name">Klaudia</span>
+          </div>
+
+          <div class="hidden sm:flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-medium border border-white/10">
+            <i data-lucide="wallet" class="h-4 w-4 text-[var(--accent)]"></i>
+            <span id="header-balance">0 pkt</span>
+          </div>
+
+          <button id="btn-quick-task" class="tap inline-flex items-center gap-2 rounded-lg bg-[var(--accent)]/85 text-white px-4 py-2 text-sm font-semibold hover:bg-[var(--accent)] transition shadow-[0_8px_30px_rgba(255,3,84,0.35)]">
+            <i data-lucide="plus" class="h-4 w-4"></i>
+            <span class="hidden sm:inline">Dodaj zlecenie</span>
           </button>
 
-          <button id="btn-sync" class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10 transition">
-            <i data-lucide="refresh-ccw" class="h-4 w-4"></i>
-            <span>Odśwież</span>
-          </button>
-
-          <button id="btn-menu" class="inline-flex sm:hidden items-center justify-center rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10 transition" aria-label="Menu">
-            <i data-lucide="menu" class="h-5 w-5"></i>
-          </button>
-
-          <button id="btn-logout" class="hidden items-center gap-2 rounded-lg bg-[var(--accent)]/80 px-3 py-2 text-sm font-semibold hover:bg-[var(--accent)] transition">
+          <button id="btn-logout" class="tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition border border-white/10">
             <i data-lucide="log-out" class="h-4 w-4"></i>
             <span class="hidden sm:inline">Wyloguj</span>
           </button>
@@ -76,1749 +145,1324 @@
       </div>
     </header>
 
-    <!-- Layout -->
-    <main class="mx-auto max-w-7xl p-4 md:p-6 pb-28">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- Sidebar (desktop) -->
-        <aside class="hidden lg:block lg:col-span-3">
+    <main class="mx-auto max-w-7xl p-4 md:p-8">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <!-- sidebar -->
+        <aside class="lg:col-span-1">
           <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl sticky top-24">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+            <div class="flex items-center gap-3 px-3 py-2 mb-3 rounded-xl bg-black/20 border border-white/10">
+              <div class="h-10 w-10 rounded-xl bg-[var(--accent)]/15 ring-1 ring-white/10 grid place-items-center">
                 <i data-lucide="sparkles" class="h-5 w-5 text-[var(--accent)]"></i>
               </div>
               <div class="leading-tight">
-                <div id="sidebar-hello" class="text-sm font-semibold">Witaj 👋</div>
-                <div id="sidebar-meta" class="text-xs text-white/60">Zaloguj się</div>
+                <div class="font-semibold">Szybki panel</div>
+                <div class="text-xs text-white/60">bez chaosu</div>
               </div>
             </div>
 
-            <nav id="nav" class="flex flex-col gap-1 text-sm">
-              <!-- filled by JS -->
+            <nav class="flex flex-col gap-2">
+              <button data-view="dashboard" class="nav-btn flex items-center gap-4 px-5 py-4 rounded-lg bg-white/10 font-semibold text-white transition text-base">
+                <i data-lucide="layout-dashboard" class="h-6 w-6 text-[var(--accent)]"></i><span>Dashboard</span>
+              </button>
+              <button data-view="projects" class="nav-btn flex items-center gap-4 px-5 py-4 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition text-base">
+                <i data-lucide="folder-kanban" class="h-6 w-6"></i><span>Projekty</span>
+              </button>
+              <button data-view="tasks" class="nav-btn flex items-center gap-4 px-5 py-4 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition text-base">
+                <i data-lucide="kanban" class="h-6 w-6"></i><span>Zlecenia</span>
+              </button>
+              <button data-view="points" class="nav-btn flex items-center gap-4 px-5 py-4 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition text-base">
+                <i data-lucide="wallet" class="h-6 w-6"></i><span>Punkty / Budżet</span>
+              </button>
+              <button data-view="reports" class="nav-btn flex items-center gap-4 px-5 py-4 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition text-base">
+                <i data-lucide="bar-chart-3" class="h-6 w-6"></i><span>Raporty</span>
+              </button>
+              <button data-view="settings" class="nav-btn flex items-center gap-4 px-5 py-4 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition text-base">
+                <i data-lucide="settings" class="h-6 w-6"></i><span>Ustawienia</span>
+              </button>
             </nav>
+
+            <div class="mt-4 p-4 rounded-2xl border border-white/10 bg-black/20">
+              <div class="text-sm font-semibold">Statusy</div>
+              <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">Backlog</span>
+                <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">To do</span>
+                <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">In progress</span>
+                <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">Review</span>
+                <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">Done</span>
+              </div>
+            </div>
           </div>
         </aside>
 
-        <!-- Content -->
-        <section class="lg:col-span-9">
-          <div id="view"></div>
+        <!-- content -->
+        <section class="lg:col-span-4 space-y-8">
+          <!-- DASHBOARD -->
+          <div id="view-dashboard" class="view space-y-8">
+            <div>
+              <h1 class="text-4xl font-bold">Dashboard</h1>
+              <p class="text-lg text-white/60 mt-2">Twoje rzeczy na dziś: terminy, zadania w toku i szybkie akcje.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="flex items-center justify-between">
+                  <div class="text-sm text-white/60">W toku</div>
+                  <i data-lucide="activity" class="h-5 w-5 text-[var(--accent)]"></i>
+                </div>
+                <div id="kpi-inprogress" class="mt-2 text-3xl font-bold">0</div>
+                <div class="mt-2 text-sm text-white/60">Zlecenia w statusie In progress / Review</div>
+              </div>
+
+              <div class="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="flex items-center justify-between">
+                  <div class="text-sm text-white/60">Po terminie</div>
+                  <i data-lucide="alarm-clock" class="h-5 w-5 text-[var(--accent)]"></i>
+                </div>
+                <div id="kpi-overdue" class="mt-2 text-3xl font-bold">0</div>
+                <div class="mt-2 text-sm text-white/60">Wymagają uwagi / eskalacji</div>
+              </div>
+
+              <div class="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="flex items-center justify-between">
+                  <div class="text-sm text-white/60">Saldo</div>
+                  <i data-lucide="wallet" class="h-5 w-5 text-[var(--accent)]"></i>
+                </div>
+                <div id="kpi-balance" class="mt-2 text-3xl font-bold">0 pkt</div>
+                <div class="mt-2 text-sm text-white/60">Punkty (motywacja / rozliczenia)</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div class="p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl space-y-4">
+                <div class="flex items-center justify-between">
+                  <h2 class="text-2xl font-bold">Twoje zadania (szybko)</h2>
+                  <button id="btn-jump-kanban" class="tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition border border-white/10">
+                    <i data-lucide="kanban" class="h-4 w-4"></i> Otwórz Kanban
+                  </button>
+                </div>
+                <div id="my-tasks-list" class="space-y-3"></div>
+                <div id="my-tasks-empty" class="hidden text-white/60 text-sm rounded-xl border border-white/10 bg-black/20 p-4">
+                  Brak zadań przypisanych. Dodaj pierwsze zlecenie i przypisz je do siebie.
+                </div>
+              </div>
+
+              <div class="p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl space-y-4">
+                <div class="flex items-center justify-between">
+                  <h2 class="text-2xl font-bold">Powiadomienia</h2>
+                  <button id="btn-mark-read" class="tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition border border-white/10">
+                    <i data-lucide="check-check" class="h-4 w-4"></i> Oznacz jako przeczytane
+                  </button>
+                </div>
+                <div id="notif-list" class="space-y-3"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROJECTS -->
+          <div id="view-projects" class="view hidden space-y-8">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h1 class="text-4xl font-bold">Projekty</h1>
+                <p class="text-lg text-white/60 mt-2">Karta projektu: cele, członkowie, budżet i zdrowie.</p>
+              </div>
+              <button id="btn-new-project" class="tap inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-3 font-semibold hover:brightness-110 transition shadow-[0_8px_30px_rgba(255,3,84,0.35)]">
+                <i data-lucide="plus" class="h-5 w-5"></i><span>Nowy projekt</span>
+              </button>
+            </div>
+
+            <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+          </div>
+
+          <!-- TASKS / KANBAN -->
+          <div id="view-tasks" class="view hidden space-y-8">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h1 class="text-4xl font-bold">Zlecenia</h1>
+                <p class="text-lg text-white/60 mt-2">Kanban: przeciągnij kartę między statusami. Kliknij kartę, aby wejść w szczegóły.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <select id="task-filter-project" class="bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                  <option value="all">Wszystkie projekty</option>
+                </select>
+                <button id="btn-new-task" class="tap inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-3 font-semibold hover:brightness-110 transition shadow-[0_8px_30px_rgba(255,3,84,0.35)]">
+                  <i data-lucide="plus" class="h-5 w-5"></i><span>Dodaj</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 items-start">
+              <div class="kan-col p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl" data-col="Backlog">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold">Backlog</div>
+                  <span class="text-xs text-white/60" data-count="Backlog">0</span>
+                </div>
+                <div class="mt-3 space-y-3 min-h-[120px]" data-drop="Backlog"></div>
+              </div>
+
+              <div class="kan-col p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl" data-col="To do">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold">To do</div>
+                  <span class="text-xs text-white/60" data-count="To do">0</span>
+                </div>
+                <div class="mt-3 space-y-3 min-h-[120px]" data-drop="To do"></div>
+              </div>
+
+              <div class="kan-col p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl" data-col="In progress">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold">In progress</div>
+                  <span class="text-xs text-white/60" data-count="In progress">0</span>
+                </div>
+                <div class="mt-3 space-y-3 min-h-[120px]" data-drop="In progress"></div>
+              </div>
+
+              <div class="kan-col p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl" data-col="Review">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold">Review</div>
+                  <span class="text-xs text-white/60" data-count="Review">0</span>
+                </div>
+                <div class="mt-3 space-y-3 min-h-[120px]" data-drop="Review"></div>
+              </div>
+
+              <div class="kan-col p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl" data-col="Done">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold">Done</div>
+                  <span class="text-xs text-white/60" data-count="Done">0</span>
+                </div>
+                <div class="mt-3 space-y-3 min-h-[120px]" data-drop="Done"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- POINTS -->
+          <div id="view-points" class="view hidden space-y-8">
+            <div>
+              <h1 class="text-4xl font-bold">Punkty / Budżet</h1>
+              <p class="text-lg text-white/60 mt-2">Tryb MVP: punkty za zadania. Flow: Done → Claim → Approve.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div class="p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="flex items-center justify-between">
+                  <div class="text-sm text-white/60">Saldo</div>
+                  <i data-lucide="wallet" class="h-5 w-5 text-[var(--accent)]"></i>
+                </div>
+                <div id="points-balance" class="mt-2 text-3xl font-bold">0 pkt</div>
+                <div class="mt-2 text-sm text-white/60">Punkty przypisane do użytkownika</div>
+              </div>
+
+              <div class="p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl lg:col-span-2">
+                <div class="flex items-center justify-between">
+                  <h2 class="text-2xl font-bold">Wnioski (Claim)</h2>
+                  <span class="text-xs font-semibold rounded-full bg-white/5 px-3 py-1 text-white/70 border border-white/10">Manager akceptuje</span>
+                </div>
+                <div id="claims-list" class="mt-4 space-y-3"></div>
+                <div id="claims-empty" class="hidden mt-4 text-white/60 text-sm rounded-xl border border-white/10 bg-black/20 p-4">
+                  Brak wniosków. Oznacz zadanie jako Done i złóż claim.
+                </div>
+              </div>
+            </div>
+
+            <div class="p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+              <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold">Historia transakcji</h2>
+                <button id="btn-seed-earn" class="tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition border border-white/10">
+                  <i data-lucide="sparkles" class="h-4 w-4"></i> Dodaj demo wpis
+                </button>
+              </div>
+              <div class="mt-4 overflow-x-auto">
+                <table class="w-full text-left">
+                  <thead class="border-b border-white/10 text-sm text-white/60">
+                    <tr>
+                      <th class="p-3">Data</th>
+                      <th class="p-3">Typ</th>
+                      <th class="p-3">Projekt</th>
+                      <th class="p-3">Zlecenie</th>
+                      <th class="p-3">Kwota</th>
+                      <th class="p-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tx-table"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- REPORTS -->
+          <div id="view-reports" class="view hidden space-y-8">
+            <div>
+              <h1 class="text-4xl font-bold">Raporty</h1>
+              <p class="text-lg text-white/60 mt-2">Szybkie „zdrowie zespołu”: w toku, po terminie, obciążenie.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="text-sm text-white/60">Wszystkie zadania</div>
+                <div id="rep-total" class="mt-2 text-3xl font-bold">0</div>
+              </div>
+              <div class="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="text-sm text-white/60">Średni czas do deadline (demo)</div>
+                <div id="rep-avg" class="mt-2 text-3xl font-bold">—</div>
+              </div>
+              <div class="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                <div class="text-sm text-white/60">Punkty (okres)</div>
+                <div id="rep-points" class="mt-2 text-3xl font-bold">0 pkt</div>
+              </div>
+            </div>
+
+            <div class="p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+              <h2 class="text-2xl font-bold">Obciążenie per osoba (demo)</h2>
+              <div id="rep-load" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+          </div>
+
+          <!-- SETTINGS -->
+          <div id="view-settings" class="view hidden space-y-8">
+            <div>
+              <h1 class="text-4xl font-bold">Ustawienia</h1>
+              <p class="text-lg text-white/60 mt-2">Profil, powiadomienia, role (demo) i preferencje.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div class="p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl space-y-4">
+                <h2 class="text-2xl font-bold">Profil</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-white/70 mb-2">Imię</label>
+                    <input id="set-name" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="Klaudia"/>
+                  </div>
+                  <div>
+                    <label class="block text-sm text-white/70 mb-2">Rola</label>
+                    <select id="set-role" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                      <option>Owner</option>
+                      <option selected>Manager</option>
+                      <option>Employee</option>
+                      <option>Client</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button id="btn-save-profile" class="tap inline-flex items-center justify-center gap-2 w-full rounded-lg bg-[var(--accent)] px-5 py-3 font-semibold hover:brightness-110 transition shadow-[0_8px_30px_rgba(255,3,84,0.35)]">
+                  <i data-lucide="save" class="h-5 w-5"></i><span>Zapisz</span>
+                </button>
+
+                <div class="text-sm text-white/60">
+                  Demo RBAC: UI może pokazywać/ukrywać akcje. Docelowo: uprawnienia per projekt + per funkcja po backendzie.
+                </div>
+              </div>
+
+              <div class="p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl space-y-4">
+                <h2 class="text-2xl font-bold">Powiadomienia</h2>
+                <label class="flex items-center justify-between gap-4 p-4 rounded-2xl border border-white/10 bg-black/20">
+                  <div>
+                    <div class="font-semibold">In-app</div>
+                    <div class="text-sm text-white/60">Komentarze, zmiany statusu, terminy</div>
+                  </div>
+                  <input type="checkbox" checked class="h-5 w-5 accent-[var(--accent)]">
+                </label>
+                <label class="flex items-center justify-between gap-4 p-4 rounded-2xl border border-white/10 bg-black/20">
+                  <div>
+                    <div class="font-semibold">Web Push (MVP-lite)</div>
+                    <div class="text-sm text-white/60">Tylko do najważniejszych</div>
+                  </div>
+                  <input type="checkbox" class="h-5 w-5 accent-[var(--accent)]">
+                </label>
+                <label class="flex items-center justify-between gap-4 p-4 rounded-2xl border border-white/10 bg-black/20">
+                  <div>
+                    <div class="font-semibold">E-mail</div>
+                    <div class="text-sm text-white/60">Raport tygodniowy / przypomnienia</div>
+                  </div>
+                  <input type="checkbox" class="h-5 w-5 accent-[var(--accent)]">
+                </label>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     </main>
+  </div>
 
-    <!-- Mobile drawer -->
-    <div id="drawer" class="fixed inset-0 z-[90] hidden">
-      <div id="drawer-backdrop" class="absolute inset-0 bg-black/60"></div>
-      <div class="absolute left-0 top-0 bottom-0 w-[86%] max-w-xs p-4 border-r border-white/10 bg-black/40 backdrop-blur-xl">
-        <div class="flex items-center justify-between">
+  <!-- TASK MODAL -->
+  <div id="modal-task" class="hidden fixed inset-0 z-[90]">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative mx-auto max-w-2xl p-4 md:p-8">
+      <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl soft-shadow overflow-hidden">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <img src="https://i.imgur.com/ikYb7tH.png" alt="logo" class="h-9 w-9 rounded-xl ring-1 ring-white/10" />
+            <div class="h-11 w-11 rounded-2xl bg-[var(--accent)]/15 grid place-items-center ring-1 ring-white/10">
+              <i data-lucide="clipboard-list" class="h-5 w-5 text-[var(--accent)]"></i>
+            </div>
             <div class="leading-tight">
-              <div class="text-base font-semibold">VelorieTeam</div>
-              <div id="drawer-meta" class="text-xs text-white/60">Menu</div>
+              <div class="text-lg font-semibold tracking-tight">Nowe zlecenie</div>
+              <div class="text-xs text-white/60">Szybkie dodawanie (MVP)</div>
             </div>
           </div>
-          <button id="btn-close-drawer" class="inline-flex items-center justify-center rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10 transition" aria-label="Zamknij">
-            <i data-lucide="x" class="h-5 w-5"></i>
+          <button id="task-close" class="tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition border border-white/10">
+            <i data-lucide="x" class="h-4 w-4"></i> Zamknij
           </button>
         </div>
 
-        <div class="mt-4 p-3 rounded-2xl border border-white/10 bg-white/5">
-          <div id="drawer-hello" class="text-sm font-semibold">Witaj 👋</div>
-          <div id="drawer-sub" class="text-xs text-white/60">Zaloguj się</div>
-        </div>
-
-        <nav id="nav-mobile" class="mt-4 flex flex-col gap-1 text-sm"></nav>
-
-        <div class="mt-4 grid grid-cols-2 gap-2">
-          <button id="btn-push-m" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10 transition">
-            <i data-lucide="bell-ring" class="h-4 w-4 text-[var(--accent)]"></i>
-            <span>Push</span>
-          </button>
-          <button id="btn-sync-m" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10 transition">
-            <i data-lucide="refresh-ccw" class="h-4 w-4"></i>
-            <span>Odśwież</span>
-          </button>
-          <button id="btn-logout-m" class="col-span-2 hidden inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)]/80 px-3 py-2 text-sm font-semibold hover:bg-[var(--accent)] transition">
-            <i data-lucide="log-out" class="h-4 w-4"></i>
-            <span>Wyloguj</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom nav (mobile) -->
-    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t border-white/10 bg-black/35 backdrop-blur-xl">
-      <div class="mx-auto max-w-7xl px-3 py-2 grid grid-cols-5 gap-2 text-xs">
-        <!-- filled by JS -->
-      </div>
-    </nav>
-
-    <!-- Modal -->
-    <div id="modal" class="fixed inset-0 z-[110] hidden">
-      <div id="modal-backdrop" class="absolute inset-0 bg-black/70"></div>
-      <div class="absolute left-1/2 top-1/2 w-[92%] max-w-lg -translate-x-1/2 -translate-y-1/2 p-4 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <div id="modal-title" class="text-base font-semibold">Modal</div>
-            <div id="modal-sub" class="text-xs text-white/60 mt-1"></div>
+        <div class="p-6 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-white/70 mb-2">Tytuł</label>
+              <input id="task-title" placeholder="np. Wdrożenie płatności" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+            </div>
+            <div>
+              <label class="block text-sm text-white/70 mb-2">Projekt</label>
+              <select id="task-project" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition"></select>
+            </div>
           </div>
-          <button id="modal-close" class="inline-flex items-center justify-center rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10 transition" aria-label="Zamknij">
-            <i data-lucide="x" class="h-5 w-5"></i>
+
+          <div>
+            <label class="block text-sm text-white/70 mb-2">Opis</label>
+            <textarea id="task-desc" rows="3" placeholder="Krótko i konkretnie. Checklistę możesz dopisać w szczegółach." class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition"></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm text-white/70 mb-2">Priorytet</label>
+              <select id="task-priority" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-white/70 mb-2">Deadline</label>
+              <input id="task-deadline" type="date" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+            </div>
+            <div>
+              <label class="block text-sm text-white/70 mb-2">Wartość (pkt)</label>
+              <input id="task-points" type="number" min="0" value="5" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-white/70 mb-2">Odpowiedzialny</label>
+              <select id="task-assignee" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition"></select>
+            </div>
+            <div>
+              <label class="block text-sm text-white/70 mb-2">Status startowy</label>
+              <select id="task-status" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+                <option>Backlog</option>
+                <option selected>To do</option>
+                <option>In progress</option>
+                <option>Review</option>
+                <option>Done</option>
+              </select>
+            </div>
+          </div>
+
+          <button id="task-save" class="tap w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-3 font-semibold hover:brightness-110 transition shadow-[0_8px_30px_rgba(255,3,84,0.35)]">
+            <i data-lucide="check" class="h-5 w-5"></i><span>Zapisz zlecenie</span>
           </button>
+
+          <div class="text-xs text-white/60">
+            Automaty (docelowo): status change → powiadom, przypisz reviewer, ustaw reguły. Tu: demo in-app notyfikacji.
+          </div>
         </div>
-        <div id="modal-body" class="mt-4"></div>
       </div>
     </div>
   </div>
 
+  <!-- TASK DRAWER -->
+  <div id="drawer" class="hidden fixed inset-0 z-[95]">
+    <div id="drawer-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="absolute right-0 top-0 h-full w-full max-w-xl border-l border-white/10 bg-white/5 backdrop-blur-2xl soft-shadow overflow-hidden">
+      <div class="p-5 border-b border-white/10 flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-xs text-white/60">Zlecenie</div>
+          <div id="d-title" class="text-lg font-semibold truncate">—</div>
+        </div>
+        <button id="drawer-close" class="tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition border border-white/10">
+          <i data-lucide="x" class="h-4 w-4"></i> Zamknij
+        </button>
+      </div>
+
+      <div class="p-5 space-y-5 overflow-y-auto h-[calc(100%-64px)]">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+            <div class="text-xs text-white/60">Projekt</div>
+            <div id="d-project" class="font-semibold mt-1">—</div>
+          </div>
+          <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+            <div class="text-xs text-white/60">Odpowiedzialny</div>
+            <div id="d-assignee" class="font-semibold mt-1">—</div>
+          </div>
+          <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+            <div class="text-xs text-white/60">Status</div>
+            <select id="d-status" class="mt-1 w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
+              <option>Backlog</option><option>To do</option><option>In progress</option><option>Review</option><option>Done</option>
+            </select>
+          </div>
+          <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+            <div class="text-xs text-white/60">Deadline</div>
+            <div id="d-deadline" class="font-semibold mt-1">—</div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-sm font-semibold">Opis</div>
+            <span id="d-priority" class="text-xs font-bold px-2 py-1 rounded-full border border-white/10 bg-white/5 text-white/70">—</span>
+          </div>
+          <div id="d-desc" class="mt-2 text-sm text-white/70 leading-relaxed">—</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+            <div class="text-xs text-white/60">Wartość</div>
+            <div class="mt-1 flex items-center gap-2">
+              <i data-lucide="wallet" class="h-4 w-4 text-[var(--accent)]"></i>
+              <div id="d-points" class="font-semibold">0 pkt</div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+            <div class="text-xs text-white/60">Akcje (punkty)</div>
+            <button id="btn-claim" class="tap mt-2 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)]/85 px-4 py-2 text-sm font-semibold hover:bg-[var(--accent)] transition shadow-[0_8px_30px_rgba(255,3,84,0.25)]">
+              <i data-lucide="hand-coins" class="h-4 w-4"></i><span>Złóż claim</span>
+            </button>
+            <div class="mt-2 text-xs text-white/60">Wymaga statusu Done</div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-sm font-semibold">Komentarze</div>
+            <span class="text-xs text-white/60">@mention działa jako notyfikacja (demo)</span>
+          </div>
+
+          <div id="d-comments" class="mt-3 space-y-3"></div>
+
+          <div class="mt-4 grid grid-cols-1 gap-3">
+            <textarea id="d-new-comment" rows="2" placeholder="Napisz komentarz… (np. @Klaudia proszę o review)" class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition"></textarea>
+            <button id="btn-add-comment" class="tap inline-flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition border border-white/10">
+              <i data-lucide="send" class="h-4 w-4"></i><span>Dodaj</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+          <div class="text-sm font-semibold">Checklist (MVP-lite)</div>
+          <div class="mt-3 space-y-2 text-sm text-white/70">
+            <label class="flex items-center gap-3">
+              <input type="checkbox" class="h-4 w-4 accent-[var(--accent)]"><span>Opis gotowy</span>
+            </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" class="h-4 w-4 accent-[var(--accent)]"><span>Weryfikacja / review</span>
+            </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" class="h-4 w-4 accent-[var(--accent)]"><span>Zamknięcie / archiwizacja</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toasts" class="fixed z-[120] right-4 bottom-4 space-y-3"></div>
+
   <script>
-    // =========================
-    //  CONFIG (MVP)
-    // =========================
-    // W PRODUKCJI: zamiast tego zrób /api/auth/login na backendzie, a admin login+hasło trzymaj w ENV.
-    const ADMIN_LOGIN = "admin";      // <- placeholder
-    const ADMIN_PASSWORD = "0051";    // <- placeholder
+    document.addEventListener('DOMContentLoaded', () => {
+      // ===== particles =====
+      const createParticles = () => {
+        const container = document.getElementById('particles-container');
+        if (!container) return;
+        const particleCount = 30;
+        for (let i = 0; i < particleCount; i++) {
+          const p = document.createElement('span');
+          const size = 22 + (i % 6) * 12;
+          p.className = 'absolute rounded-full opacity-20 blur-2xl particle';
+          p.style.width = `${size}px`;
+          p.style.height = `${size}px`;
+          p.style.background = i % 3 ? 'var(--accent)' : "#4f46e5";
+          p.style.left = `${Math.random() * 100}%`;
+          p.style.top = `${Math.random() * 100}%`;
+          p.style.animationDuration = `${10 + (i % 6)}s`;
+          p.style.animationDelay = `${i * 0.18}s`;
+          container.appendChild(p);
+        }
+      };
 
-    const LS = {
-      session: "vt_session",
-      db: "vt_db_v1"
-    };
-
-    const ROLE_PERMS = {
-      admin:   { canEditAll: true,  canSeeSecrets: true,  canManageUsers: true  },
-      pm:      { canEditAll: true,  canSeeSecrets: false, canManageUsers: false },
-      dev:     { canEditAll: false, canSeeSecrets: false, canManageUsers: false },
-      designer:{ canEditAll: false, canSeeSecrets: false, canManageUsers: false },
-    };
-
-    const NAV_ITEMS = [
-      { key:"dashboard",  label:"Dashboard",    icon:"layout-dashboard", hash:"#/dashboard", mobile:true, bottom:true },
-      { key:"team",       label:"Zespół & role",icon:"users",            hash:"#/team",      mobile:true, bottom:true },
-      { key:"projects",   label:"Projekty",     icon:"layers",           hash:"#/projects",  mobile:true, bottom:true },
-      { key:"tasks",      label:"Zadania",      icon:"check-square",     hash:"#/tasks",     mobile:true, bottom:true },
-      { key:"bugs",       label:"Bug tracker",  icon:"bug",              hash:"#/bugs",      mobile:true, bottom:true },
-
-      { key:"design",     label:"Design hub",   icon:"palette",          hash:"#/design",    mobile:true },
-      { key:"assets",     label:"Asset manager",icon:"images",           hash:"#/assets",    mobile:true },
-      { key:"docs",       label:"Wiki / Docs",  icon:"book-text",        hash:"#/docs",      mobile:true },
-      { key:"snippets",   label:"Snippety",     icon:"braces",           hash:"#/snippets",  mobile:true },
-      { key:"releases",   label:"Release",      icon:"rocket",           hash:"#/releases",  mobile:true },
-      { key:"automation", label:"Automatyzacje",icon:"zap",              hash:"#/automation",mobile:true },
-      { key:"ai",         label:"AI Asystent",  icon:"sparkles",         hash:"#/ai",        mobile:true },
-      { key:"secrets",    label:"Dostępy",      icon:"key-round",        hash:"#/secrets",   mobile:true, adminOnly:true },
-      { key:"git",        label:"Integracje Git",icon:"git-branch",      hash:"#/git",       mobile:true },
-      { key:"comms",      label:"Komunikacja",  icon:"messages-square",  hash:"#/comms",     mobile:true },
-    ];
-
-    // =========================
-    //  DB (local MVP)
-    // =========================
-    function uid(prefix="ID") {
-      return prefix + "-" + Math.random().toString(16).slice(2, 8).toUpperCase();
-    }
-
-    function loadDB() {
-      const raw = localStorage.getItem(LS.db);
-      if (raw) {
-        try { return JSON.parse(raw); } catch (e) {}
-      }
-      // seed
-      const db = {
+      // ===== mini store (demo) =====
+      const store = {
+        me: { id: 'u1', name: 'Klaudia', role: 'Manager', points: 25 },
         users: [
-          { id:"U-ADMIN", name:"Admin", email:"admin@velorie.pl", role:"admin", status:"online" },
-          { id:"U-1", name:"Klaudia", email:"klaudia@velorie.pl", role:"designer", status:"focus" },
-          { id:"U-2", name:"Bartek", email:"bartek@velorie.pl", role:"dev", status:"online" },
-          { id:"U-3", name:"Ola", email:"ola@velorie.pl", role:"pm", status:"urlop" },
+          { id: 'u1', name: 'Klaudia', role: 'Manager' },
+          { id: 'u2', name: 'Olek', role: 'Employee' },
+          { id: 'u3', name: 'Maja', role: 'Employee' },
         ],
         projects: [
-          {
-            id:"P-1", name:"ItemShop Panel", state:"aktywny",
-            members:["U-ADMIN","U-2","U-1","U-3"],
-            stack:["Next.js","Tailwind","Node.js","PostgreSQL"],
-            links:{ repo:"https://github.com/org/repo", figma:"https://figma.com/file/xyz", domain:"https://velorie.pl", staging:"https://staging.velorie.pl" }
-          },
-          {
-            id:"P-2", name:"VelorieTeam", state:"aktywny",
-            members:["U-ADMIN","U-2","U-3"],
-            stack:["React","Tailwind","Express","MongoDB"],
-            links:{ repo:"https://gitlab.com/org/velorieteam", figma:"", domain:"", staging:"" }
-          }
+          { id:'p1', name:'Velorie – Item Shop', desc:'Panel klienta, płatności, UX szybki.', health:'Good', budget: 1200, due:'2026-01-20', members:['u1','u2','u3'] },
+          { id:'p2', name:'Automatyzacje', desc:'Reguły: status → notyfikacje, reviewer.', health:'At Risk', budget: 600, due:'2026-02-05', members:['u1','u2'] },
         ],
         tasks: [
-          { id:"T-1", title:"Ekran logowania", status:"Done", prio:"High", deadline:"2025-12-29", assignee:"U-2", tags:["frontend"], checklist:["UI","walidacja"], comments:[] },
-          { id:"T-2", title:"Role i uprawnienia", status:"In Progress", prio:"High", deadline:"2025-12-30", assignee:"U-ADMIN", tags:["backend"], checklist:["RBAC","secrets tab"], comments:[] },
-          { id:"T-3", title:"Tablica backlog", status:"ToDo", prio:"Medium", deadline:"2026-01-05", assignee:"U-3", tags:["pm"], checklist:["kolumny","filtry"], comments:[] },
+          { id:'t1', projectId:'p1', title:'Widok portfela (UI)', desc:'Dopięcie stylu + historia.', status:'Done', priority:'Medium', assigneeId:'u2', reporterId:'u1', deadline:'2025-12-22', points: 8, comments:[
+            { id:'c1', authorId:'u1', body:'Zrobimy to szybko i bez chaosu.', at: Date.now()-86400000 }
+          ]},
+          { id:'t2', projectId:'p1', title:'Zlecenia: Kanban MVP', desc:'Drag&drop + filtr projektu.', status:'In progress', priority:'High', assigneeId:'u1', reporterId:'u1', deadline:'2025-12-24', points: 13, comments:[] },
+          { id:'t3', projectId:'p2', title:'Claim → Approve flow', desc:'Done → claim → approve w punktach.', status:'To do', priority:'Medium', assigneeId:'u3', reporterId:'u1', deadline:'2025-12-27', points: 5, comments:[] },
+          { id:'t4', projectId:'p2', title:'Powiadomienia in-app', desc:'@mention + zmiana statusu.', status:'Review', priority:'Medium', assigneeId:'u2', reporterId:'u1', deadline:'2025-12-23', points: 7, comments:[] },
         ],
-        bugs: [
-          { id:"B-1", title:"Błędny status powiadomień", env:"staging", status:"Otwarty", steps:"1) Wejdź w ustawienia\n2) Włącz push\n3) Odśwież", assignee:"U-2" }
+        notifications: [
+          { id:'n1', text:'@Klaudia: prośba o review w tasku „Powiadomienia in-app”.', read:false, at: Date.now()-3600000 },
+          { id:'n2', text:'Zadanie „Kanban MVP” zmieniono na In progress.', read:false, at: Date.now()-7200000 },
         ],
-        secrets: [
-          { id:"S-1", name:"API – Velorie Core", type:"API", owner:"U-ADMIN", expires:"2026-03-01", note:"Token trzymamy w 1Password. Tu tylko meta." },
-          { id:"S-2", name:"Staging – SSH", type:"Serwer", owner:"U-ADMIN", expires:"", note:"Dostęp przez bastion." }
+        claims: [
+          { id:'cl1', taskId:'t1', userId:'u2', projectId:'p1', amount:8, status:'pending', createdAt: Date.now()-900000 },
         ],
-        docs: [
-          { id:"D-1", title:"Onboarding", body:"Kroki: dostęp do repo, środowisko, zasady PR, checklisty release.", tags:["onboarding"] },
-          { id:"D-2", title:"Konwencje kodu", body:"Nazewnictwo, lint, format, branch strategy, commits.", tags:["dev"] }
-        ],
-        assets: [
-          { id:"A-1", name:"Logo Velorie", type:"logo", version:"1.0", rules:"Nie zmieniać proporcji. Accent #ff0354.", url:"https://i.imgur.com/ikYb7tH.png" }
-        ],
-        releases: [
-          { id:"R-1", version:"v1.0.0", date:"2025-12-20", notes:["Start MVP", "Login + dashboard", "Tasks board"], status:"wydane" }
-        ],
-        automations: [
-          { id:"Z-1", name:"PR merged → Done", active:true, rule:"Gdy PR merged w main i ma #TASK-ID, ustaw zadanie Done." }
-        ],
-        activity: []
-      };
-      saveDB(db);
-      return db;
-    }
-
-    function saveDB(db) {
-      localStorage.setItem(LS.db, JSON.stringify(db));
-    }
-
-    function loadSession() {
-      const raw = localStorage.getItem(LS.session);
-      if (!raw) return null;
-      try { return JSON.parse(raw); } catch(e) { return null; }
-    }
-    function saveSession(sess) {
-      localStorage.setItem(LS.session, JSON.stringify(sess));
-    }
-    function clearSession() {
-      localStorage.removeItem(LS.session);
-    }
-
-    // =========================
-    //  UI helpers
-    // =========================
-    const $ = (q, el=document) => el.querySelector(q);
-    const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
-
-    function toast(msg, type="info") {
-      const t = document.createElement("div");
-      t.className = "p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-lg flex items-start gap-3";
-      const icon = type==="ok" ? "check-circle2" : type==="warn" ? "alert-triangle" : "info";
-      t.innerHTML = `
-        <div class="mt-0.5 h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-          <i data-lucide="${icon}" class="h-5 w-5 ${type==="ok" ? "text-emerald-400" : type==="warn" ? "text-yellow-400" : "text-[var(--accent)]"}"></i>
-        </div>
-        <div class="flex-1">
-          <div class="text-sm font-semibold">${msg}</div>
-          <div class="text-xs text-white/60 mt-0.5">VelorieTeam</div>
-        </div>
-      `;
-      $("#toasts").appendChild(t);
-      lucide.createIcons();
-      setTimeout(() => { t.style.opacity="0"; t.style.transform="translateY(6px)"; t.style.transition="all .25s"; }, 2400);
-      setTimeout(() => t.remove(), 2800);
-    }
-
-    function card(title, subtitle, innerHtml) {
-      return `
-        <div class="p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <div class="text-lg font-bold">${title}</div>
-              ${subtitle ? `<div class="text-sm text-white/60 mt-1">${subtitle}</div>` : ""}
-            </div>
-          </div>
-          <div class="mt-4">${innerHtml}</div>
-        </div>
-      `;
-    }
-
-    function pill(text, kind="default") {
-      const cls = kind==="ok"
-        ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
-        : kind==="warn"
-          ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
-          : kind==="bad"
-            ? "bg-red-500/10 text-red-300 border-red-500/20"
-            : "bg-white/5 text-white/80 border-white/10";
-      return `<span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold border ${cls}">${text}</span>`;
-    }
-
-    function modalOpen({title, sub="", bodyHtml=""}) {
-      $("#modal-title").textContent = title;
-      $("#modal-sub").textContent = sub;
-      $("#modal-body").innerHTML = bodyHtml;
-      $("#modal").classList.remove("hidden");
-      lucide.createIcons();
-    }
-    function modalClose() {
-      $("#modal").classList.add("hidden");
-      $("#modal-body").innerHTML = "";
-    }
-
-    function setActiveNav(hash) {
-      $$("#nav a").forEach(a => a.classList.remove("bg-white/10","text-white","font-semibold"));
-      $$("#nav a").forEach(a => {
-        if (a.getAttribute("href") === hash) {
-          a.classList.add("bg-white/10","text-white","font-semibold");
-        }
-      });
-      $$("#nav-mobile a").forEach(a => a.classList.remove("bg-white/10","text-white","font-semibold"));
-      $$("#nav-mobile a").forEach(a => {
-        if (a.getAttribute("href") === hash) {
-          a.classList.add("bg-white/10","text-white","font-semibold");
-        }
-      });
-      // bottom nav active
-      $$("#bottom-nav a").forEach(a => a.classList.remove("bg-white/10","text-white","font-semibold"));
-      $$("#bottom-nav a").forEach(a => {
-        if (a.getAttribute("href") === hash) {
-          a.classList.add("bg-white/10","text-white","font-semibold");
-        }
-      });
-    }
-
-    function createParticles() {
-      const container = $("#particles-container");
-      if (!container) return;
-      const particleCount = 28;
-      for (let i=0; i<particleCount; i++) {
-        const p = document.createElement("span");
-        const size = 24 + (i % 5) * 12;
-        p.className = "absolute rounded-full opacity-20 blur-2xl particle";
-        p.style.width = size + "px";
-        p.style.height = size + "px";
-        p.style.background = i % 3 ? "var(--accent)" : "#4f46e5";
-        p.style.left = (Math.random() * 100) + "%";
-        p.style.top = (Math.random() * 100) + "%";
-        p.style.animationDuration = (10 + (i % 5)) + "s";
-        p.style.animationDelay = (i * 0.2) + "s";
-        container.appendChild(p);
-      }
-    }
-
-    function requestPush() {
-      if (!("Notification" in window)) {
-        toast("Twoja przeglądarka nie wspiera powiadomień.", "warn");
-        return;
-      }
-      Notification.requestPermission().then(p => {
-        if (p === "granted") {
-          toast("Powiadomienia włączone ✅", "ok");
-          try { new Notification("VelorieTeam", { body: "Push działa (demo).", icon: "https://i.imgur.com/ikYb7tH.png" }); } catch (e) {}
-        } else {
-          toast("Brak zgody na powiadomienia.", "warn");
-        }
-      });
-    }
-
-    // =========================
-    //  Auth
-    // =========================
-    function isAuthed() {
-      const s = loadSession();
-      return !!(s && s.userId);
-    }
-
-    function getCurrentUser(db) {
-      const s = loadSession();
-      if (!s) return null;
-      return db.users.find(u => u.id === s.userId) || null;
-    }
-
-    function loginAdmin(login, pass) {
-      // MVP: porównanie lokalne
-      if (login === ADMIN_LOGIN && pass === ADMIN_PASSWORD) {
-        return { id:"U-ADMIN", role:"admin" };
-      }
-      return null;
-    }
-
-    // =========================
-    //  Views
-    // =========================
-    function viewLogin() {
-      $("#top-subtitle").textContent = "Zaloguj się";
-      $("#btn-logout").classList.add("hidden");
-      $("#btn-logout-m").classList.add("hidden");
-      $("#sidebar-hello").textContent = "Witaj 👋";
-      $("#sidebar-meta").textContent = "Zaloguj się do panelu";
-      $("#drawer-hello").textContent = "Witaj 👋";
-      $("#drawer-sub").textContent = "Zaloguj się do panelu";
-
-      const html = `
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          ${card(
-            "Logowanie",
-            "Dostęp tylko dla zespołu. W produkcji autoryzacja powinna być po API (ENV na backendzie).",
-            `
-              <div class="space-y-4">
-                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="flex items-start gap-3">
-                    <div class="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                      <i data-lucide="shield" class="h-5 w-5 text-[var(--accent)]"></i>
-                    </div>
-                    <div>
-                      <div class="text-sm font-semibold">Admin (demo)</div>
-                      <div class="text-xs text-white/60 mt-1">Login/hasło są placeholderem w JS. Docelowo: ENV → backend → JWT.</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-white/80 mb-2">Login</label>
-                  <input id="login-user" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. admin" />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-white/80 mb-2">Hasło</label>
-                  <input id="login-pass" type="password" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="••••••" />
-                </div>
-
-                <button id="btn-login" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-3 font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
-                  <i data-lucide="log-in" class="h-5 w-5"></i>
-                  <span>Zaloguj</span>
-                </button>
-
-                <div class="text-xs text-white/60">
-                  Tip: Po zalogowaniu masz role, projekty, backlog, bugi, docs, release i więcej.
-                </div>
-              </div>
-            `
-          )}
-
-          ${card(
-            "Co tu jest w MVP",
-            "Na start: struktura + UI/UX pod mobile, dane trzymane lokalnie (localStorage).",
-            `
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="flex items-center gap-2 text-sm font-semibold">
-                    <i data-lucide="users" class="h-4 w-4 text-[var(--accent)]"></i> Zespół & role
-                  </div>
-                  <div class="text-xs text-white/60 mt-1">Role, dostępność, mini-permisje (np. Dostępy tylko admin).</div>
-                </div>
-                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="flex items-center gap-2 text-sm font-semibold">
-                    <i data-lucide="check-square" class="h-4 w-4 text-[var(--accent)]"></i> Zadania / backlog
-                  </div>
-                  <div class="text-xs text-white/60 mt-1">Kolumny ToDo → Done, priorytety, deadline, checklisty.</div>
-                </div>
-                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="flex items-center gap-2 text-sm font-semibold">
-                    <i data-lucide="layers" class="h-4 w-4 text-[var(--accent)]"></i> Projekty
-                  </div>
-                  <div class="text-xs text-white/60 mt-1">Status, członkowie, stack, linki (repo/Figma/staging).</div>
-                </div>
-                <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="flex items-center gap-2 text-sm font-semibold">
-                    <i data-lucide="bug" class="h-4 w-4 text-[var(--accent)]"></i> Bug tracker
-                  </div>
-                  <div class="text-xs text-white/60 mt-1">Env, kroki reprodukcji, status naprawy.</div>
-                </div>
-              </div>
-            `
-          )}
-        </div>
-      `;
-      $("#view").innerHTML = html;
-
-      $("#btn-login").onclick = () => {
-        const u = ($("#login-user").value || "").trim();
-        const p = ($("#login-pass").value || "").trim();
-        const ok = loginAdmin(u, p);
-        if (!ok) return toast("Błędny login lub hasło.", "warn");
-
-        const db = loadDB();
-        const user = db.users.find(x => x.id === ok.id);
-        if (!user) return toast("Brak konta admin w DB.", "warn");
-
-        saveSession({ userId: user.id, role: user.role, ts: Date.now() });
-        toast("Zalogowano ✅", "ok");
-        location.hash = "#/dashboard";
-        render();
+        tx: [
+          { id:'tx1', at: Date.now()-86400000*3, type:'earn', projectId:'p1', taskId:'t1', amount: 8, status:'approved' },
+        ]
       };
 
-      lucide.createIcons();
-    }
+      // ===== helpers =====
+      const $ = (s, r=document) => r.querySelector(s);
+      const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+      const uid = (p='id') => p + Math.random().toString(16).slice(2,10);
 
-    function canSee(item, user) {
-      if (!user) return false;
-      if (item.adminOnly && user.role !== "admin") return false;
-      return true;
-    }
-
-    function renderNav(user) {
-      const nav = $("#nav");
-      const navM = $("#nav-mobile");
-      nav.innerHTML = "";
-      navM.innerHTML = "";
-
-      const list = NAV_ITEMS.filter(it => it.mobile !== false).filter(it => canSee(it, user));
-      list.forEach(it => {
-        const a = document.createElement("a");
-        a.href = it.hash;
-        a.className = "flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition";
-        a.innerHTML = `<i data-lucide="${it.icon}" class="h-5 w-5 ${it.key==="secrets" ? "text-[var(--accent)]" : ""}"></i><span>${it.label}</span>`;
-        nav.appendChild(a);
-
-        const am = a.cloneNode(true);
-        am.onclick = () => closeDrawer();
-        navM.appendChild(am);
-      });
-
-      // Bottom nav – tylko 5
-      const bottom = $("#bottom-nav > div");
-      bottom.innerHTML = "";
-      const bottomItems = NAV_ITEMS.filter(it => it.bottom).filter(it => canSee(it, user)).slice(0,5);
-      bottomItems.forEach(it => {
-        const a = document.createElement("a");
-        a.href = it.hash;
-        a.className = "px-3 py-2 rounded-xl bg-white/0 hover:bg-white/5 transition flex flex-col items-center justify-center gap-1 text-white/70";
-        a.innerHTML = `<i data-lucide="${it.icon}" class="h-5 w-5"></i><span class="text-[11px]">${it.label}</span>`;
-        bottom.appendChild(a);
-      });
-
-      lucide.createIcons();
-    }
-
-    function headerUserUI(user) {
-      $("#btn-logout").classList.toggle("hidden", !user);
-      $("#btn-logout-m").classList.toggle("hidden", !user);
-
-      if (!user) {
-        $("#top-subtitle").textContent = "Zaloguj się";
-        $("#sidebar-hello").textContent = "Witaj 👋";
-        $("#sidebar-meta").textContent = "Zaloguj się do panelu";
-        $("#drawer-hello").textContent = "Witaj 👋";
-        $("#drawer-sub").textContent = "Zaloguj się do panelu";
-        return;
-      }
-
-      $("#top-subtitle").textContent = `${user.name} • ${user.role.toUpperCase()} • ${user.status}`;
-      $("#sidebar-hello").textContent = `Witaj, ${user.name} 👋`;
-      $("#sidebar-meta").textContent = `Rola: ${user.role} • Status: ${user.status}`;
-      $("#drawer-hello").textContent = `Witaj, ${user.name} 👋`;
-      $("#drawer-sub").textContent = `Rola: ${user.role} • Status: ${user.status}`;
-      $("#drawer-meta").textContent = "Menu";
-    }
-
-    function viewDashboard(db, user) {
-      const tasks = db.tasks;
-      const projects = db.projects;
-      const bugs = db.bugs;
-
-      const done = tasks.filter(t => t.status === "Done").length;
-      const inprog = tasks.filter(t => t.status === "In Progress").length;
-      const todo = tasks.filter(t => t.status === "ToDo").length;
-      const review = tasks.filter(t => t.status === "Review").length;
-
-      const activeProjects = projects.filter(p => p.state === "aktywny").length;
-      const openBugs = bugs.filter(b => b.status !== "Zamknięty").length;
-
-      const workload = db.users.map(u => ({
-        user: u,
-        count: tasks.filter(t => t.assignee === u.id && ["ToDo","In Progress","Review"].includes(t.status)).length
-      })).sort((a,b) => b.count - a.count);
-
-      $("#view").innerHTML = `
-        <div class="space-y-6">
-          <div>
-            <h1 class="text-3xl font-bold">Dashboard</h1>
-            <p class="text-white/60 mt-1">Szybki podgląd stanu zespołu, projektów i backlogu.</p>
-          </div>
-
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-              <div class="text-xs text-white/60">Projekty aktywne</div>
-              <div class="text-2xl font-bold mt-1">${activeProjects}</div>
-            </div>
-            <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-              <div class="text-xs text-white/60">Otwarte bugi</div>
-              <div class="text-2xl font-bold mt-1">${openBugs}</div>
-            </div>
-            <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-              <div class="text-xs text-white/60">Zadania w toku</div>
-              <div class="text-2xl font-bold mt-1">${inprog + review}</div>
-            </div>
-            <div class="p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-              <div class="text-xs text-white/60">Zamknięte</div>
-              <div class="text-2xl font-bold mt-1">${done}</div>
-            </div>
-          </div>
-
-          ${card(
-            "Backlog – statusy",
-            "ToDo / In Progress / Review / Done",
-            `
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="text-xs text-white/60">ToDo</div>
-                  <div class="text-xl font-bold mt-1">${todo}</div>
-                </div>
-                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="text-xs text-white/60">In Progress</div>
-                  <div class="text-xl font-bold mt-1">${inprog}</div>
-                </div>
-                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="text-xs text-white/60">Review</div>
-                  <div class="text-xl font-bold mt-1">${review}</div>
-                </div>
-                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="text-xs text-white/60">Done</div>
-                  <div class="text-xl font-bold mt-1">${done}</div>
-                </div>
-              </div>
-            `
-          )}
-
-          ${card(
-            "Workload zespołu",
-            "Ile otwartych zadań ma każda osoba",
-            `
-              <div class="space-y-2">
-                ${workload.map(w => `
-                  <div class="p-3 rounded-2xl border border-white/10 bg-black/30 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                      <div class="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                        <i data-lucide="user" class="h-4 w-4 text-[var(--accent)]"></i>
-                      </div>
-                      <div>
-                        <div class="text-sm font-semibold">${w.user.name} <span class="text-white/60 font-normal">• ${w.user.role}</span></div>
-                        <div class="text-xs text-white/60">Status: ${w.user.status}</div>
-                      </div>
-                    </div>
-                    <div class="text-sm font-bold">${w.count}</div>
-                  </div>
-                `).join("")}
-              </div>
-            `
-          )}
-        </div>
-      `;
-      lucide.createIcons();
-    }
-
-    function viewTeam(db, user) {
-      const options = ["online","focus","urlop"];
-      const roleOptions = ["dev","designer","pm","admin"];
-
-      const list = db.users.map(u => `
-        <div class="p-4 rounded-2xl border border-white/10 bg-black/30 flex items-start justify-between gap-3">
+      const toast = (msg, kind='info') => {
+        const box = document.createElement('div');
+        box.className = 'rounded-2xl border border-white/10 bg-white/10 backdrop-blur-xl px-4 py-3 soft-shadow';
+        box.innerHTML = `
           <div class="flex items-start gap-3">
-            <div class="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <i data-lucide="user" class="h-5 w-5 ${u.role==="admin" ? "text-[var(--accent)]" : ""}"></i>
+            <div class="h-9 w-9 rounded-xl grid place-items-center bg-[var(--accent)]/15 ring-1 ring-white/10">
+              <i data-lucide="${kind==='ok'?'check-circle-2':kind==='warn'?'alert-triangle':'bell'}" class="h-5 w-5 text-[var(--accent)]"></i>
             </div>
-            <div>
-              <div class="text-sm font-semibold">${u.name}</div>
-              <div class="text-xs text-white/60 mt-0.5">${u.email} • ${u.id}</div>
-              <div class="flex flex-wrap gap-2 mt-2">
-                ${pill(u.role.toUpperCase(), u.role==="admin" ? "ok" : "default")}
-                ${pill(u.status, u.status==="online" ? "ok" : u.status==="focus" ? "warn" : "bad")}
-              </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold">${kind==='ok'?'Gotowe':kind==='warn'?'Uwaga':'Info'}</div>
+              <div class="text-sm text-white/70 mt-1">${msg}</div>
             </div>
-          </div>
+          </div>`;
+        $('#toasts').appendChild(box);
+        lucide.createIcons();
+        setTimeout(() => box.remove(), 4200);
+      };
 
-          <div class="flex items-center gap-2">
-            <button class="btn-edit-user inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${u.id}">
-              <i data-lucide="pencil" class="h-4 w-4"></i>
-              <span>Edytuj</span>
-            </button>
-          </div>
-        </div>
-      `).join("");
+      const formatDate = (d) => {
+        if (!d) return '—';
+        const dt = new Date(d);
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth()+1).padStart(2,'0');
+        const dd = String(dt.getDate()).padStart(2,'0');
+        return `${dd}.${mm}.${yyyy}`;
+      };
 
-      $("#view").innerHTML = `
-        <div class="space-y-6">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h1 class="text-3xl font-bold">Zespół & role</h1>
-              <p class="text-white/60 mt-1">Konta użytkowników, role, dostępność (online/focus/urlop).</p>
-            </div>
-            ${user.role==="admin" ? `
-              <button id="btn-add-user" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
-                <i data-lucide="user-plus" class="h-5 w-5"></i>
-                <span>Dodaj</span>
-              </button>
-            ` : ""}
-          </div>
+      const byId = (arr,id) => arr.find(x=>x.id===id);
+      const projectName = (pid) => (byId(store.projects,pid)?.name || '—');
+      const userName = (uid) => (byId(store.users,uid)?.name || '—');
 
-          ${card("Użytkownicy", user.role==="admin" ? "Admin może dodawać i zarządzać kontami (demo)." : "Tylko podgląd (demo).", `
-            <div class="space-y-3">${list}</div>
-          `)}
-        </div>
-      `;
+      // ===== PIN login =====
+      const PIN = "33201";
+      let pinBuf = "";
 
-      // handlers
-      $$(".btn-edit-user").forEach(btn => {
-        btn.onclick = () => {
-          const id = btn.dataset.id;
-          const u = db.users.find(x => x.id === id);
-          if (!u) return;
+      const paintDots = () => {
+        const dots = $$('#pin-dots span');
+        dots.forEach((dot, i) => {
+          dot.className = 'h-3 w-3 rounded-full ring-1 ring-white/10 ' + (i < pinBuf.length ? 'bg-[var(--accent)]' : 'bg-white/15');
+        });
+      };
 
-          const canEdit = user.role==="admin" || (user.role==="pm" && u.role!=="admin") || (user.id===u.id);
-          if (!canEdit) return toast("Brak uprawnień do edycji tego konta.", "warn");
+      const tryLogin = () => {
+        if (pinBuf.length !== PIN.length) return;
+        if (pinBuf === PIN) {
+          $('#pin-error').classList.add('hidden');
+          localStorage.setItem('teamPanelSession', 'ok');
+          $('#lockscreen').classList.add('hidden');
+          $('#app').classList.remove('hidden');
+          toast('Zalogowano. Panel gotowy do pracy.', 'ok');
+          renderAll();
+          return;
+        }
+        $('#pin-error').classList.remove('hidden');
+        pinBuf = "";
+        paintDots();
+        toast('Nieprawidłowy PIN.', 'warn');
+      };
 
-          modalOpen({
-            title: "Edytuj użytkownika",
-            sub: "Zmieniaj rolę i status dostępności.",
-            bodyHtml: `
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Imię</label>
-                  <input id="m-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${u.name}">
-                </div>
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Email</label>
-                  <input id="m-email" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${u.email}">
-                </div>
+      $$('.pin-key').forEach(btn => btn.addEventListener('click', () => {
+        if (pinBuf.length >= PIN.length) return;
+        pinBuf += btn.dataset.k;
+        paintDots();
+        if (pinBuf.length === PIN.length) tryLogin();
+      }));
 
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Rola</label>
-                    <select id="m-role" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                      ${roleOptions.map(r => `<option ${u.role===r?"selected":""} value="${r}">${r}</option>`).join("")}
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Status</label>
-                    <select id="m-status" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                      ${options.map(s => `<option ${u.status===s?"selected":""} value="${s}">${s}</option>`).join("")}
-                    </select>
-                  </div>
-                </div>
+      $('#pin-back').addEventListener('click', () => { pinBuf = pinBuf.slice(0,-1); paintDots(); $('#pin-error').classList.add('hidden'); });
+      $('#pin-clear').addEventListener('click', () => { pinBuf = ""; paintDots(); $('#pin-error').classList.add('hidden'); });
+      $('#pin-enter').addEventListener('click', tryLogin);
 
-                <div class="pt-2 flex items-center justify-end gap-2">
-                  <button id="m-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                  <button id="m-save" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Zapisz</button>
-                </div>
-              </div>
-            `
-          });
-
-          $("#m-cancel").onclick = modalClose;
-          $("#m-save").onclick = () => {
-            const nr = $("#m-role").value;
-            const ns = $("#m-status").value;
-
-            // prosta ochrona: nikt poza adminem nie może dać sobie admina
-            if (user.role !== "admin" && nr === "admin") return toast("Tylko admin może nadawać rolę admin.", "warn");
-            if (u.role === "admin" && user.role !== "admin") return toast("Nie możesz edytować admina.", "warn");
-
-            u.name = ($("#m-name").value||"").trim() || u.name;
-            u.email = ($("#m-email").value||"").trim() || u.email;
-            u.role = nr;
-            u.status = ns;
-
-            saveDB(db);
-            modalClose();
-            toast("Zapisano użytkownika ✅", "ok");
-            viewTeam(db, user);
-            lucide.createIcons();
-          };
-        };
-      });
-
-      if (user.role === "admin") {
-        $("#btn-add-user").onclick = () => {
-          modalOpen({
-            title: "Dodaj użytkownika",
-            sub: "Konto (dev / designer / PM / admin) – demo lokalne.",
-            bodyHtml: `
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Imię</label>
-                  <input id="a-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. Michał">
-                </div>
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Email</label>
-                  <input id="a-email" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. michal@velorie.pl">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Rola</label>
-                    <select id="a-role" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                      ${roleOptions.map(r => `<option value="${r}">${r}</option>`).join("")}
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Status</label>
-                    <select id="a-status" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                      ${options.map(s => `<option value="${s}">${s}</option>`).join("")}
-                    </select>
-                  </div>
-                </div>
-
-                <div class="pt-2 flex items-center justify-end gap-2">
-                  <button id="a-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                  <button id="a-add" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
-                </div>
-              </div>
-            `
-          });
-          $("#a-cancel").onclick = modalClose;
-          $("#a-add").onclick = () => {
-            const name = ($("#a-name").value||"").trim();
-            const email = ($("#a-email").value||"").trim();
-            if (!name || !email) return toast("Podaj imię i email.", "warn");
-            db.users.unshift({ id: uid("U"), name, email, role: $("#a-role").value, status: $("#a-status").value });
-            saveDB(db);
-            modalClose();
-            toast("Dodano użytkownika ✅", "ok");
-            viewTeam(db, user);
-          };
-        };
+      // auto session
+      if (localStorage.getItem('teamPanelSession') === 'ok') {
+        $('#lockscreen').classList.add('hidden');
+        $('#app').classList.remove('hidden');
       }
 
-      lucide.createIcons();
-    }
+      // ===== navigation =====
+      const showView = (name) => {
+        $$('.view').forEach(v => v.classList.add('hidden'));
+        $('#view-'+name).classList.remove('hidden');
+        $$('.nav-btn').forEach(b => {
+          const on = b.dataset.view === name;
+          b.classList.toggle('bg-white/10', on);
+          b.classList.toggle('font-semibold', on);
+          b.classList.toggle('text-white', on);
+          b.classList.toggle('text-white/70', !on);
+          const ico = b.querySelector('i[data-lucide]');
+          if (ico) ico.classList.toggle('text-[var(--accent)]', on);
+        });
+      };
+      $$('.nav-btn').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+      $('#btn-jump-kanban').addEventListener('click', () => showView('tasks'));
 
-    function viewProjects(db, user) {
-      const usersById = Object.fromEntries(db.users.map(u => [u.id, u]));
-      const list = db.projects.map(p => `
-        <div class="p-4 rounded-2xl border border-white/10 bg-black/30 space-y-3">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="text-sm font-semibold">${p.name}</div>
-              <div class="text-xs text-white/60 mt-0.5">${p.id}</div>
-              <div class="flex flex-wrap gap-2 mt-2">
-                ${pill(p.state, p.state==="aktywny" ? "ok" : p.state==="wstrzymany" ? "warn" : "bad")}
-                ${pill((p.stack||[]).slice(0,2).join(" • ") + ((p.stack||[]).length>2 ? " +" : ""), "default")}
+      // ===== header profile =====
+      const syncHeader = () => {
+        $('#whoami-name').textContent = store.me.name;
+        $('#whoami-role').textContent = store.me.role;
+        $('#header-balance').textContent = `${store.me.points} pkt`;
+        $('#kpi-balance').textContent = `${store.me.points} pkt`;
+        $('#points-balance').textContent = `${store.me.points} pkt`;
+      };
+
+      // ===== dashboard render =====
+      const renderDashboard = () => {
+        const now = new Date();
+        const overdue = store.tasks.filter(t => t.deadline && new Date(t.deadline) < now && !['Done'].includes(t.status)).length;
+        const inprog = store.tasks.filter(t => ['In progress','Review'].includes(t.status)).length;
+        $('#kpi-overdue').textContent = overdue;
+        $('#kpi-inprogress').textContent = inprog;
+
+        // my tasks
+        const mine = store.tasks.filter(t => t.assigneeId === store.me.id && !['Done'].includes(t.status)).slice(0,5);
+        const list = $('#my-tasks-list');
+        list.innerHTML = '';
+        if (!mine.length) $('#my-tasks-empty').classList.remove('hidden'); else $('#my-tasks-empty').classList.add('hidden');
+
+        mine.forEach(t => {
+          const el = document.createElement('button');
+          el.className = 'tap w-full text-left p-4 rounded-2xl border border-white/10 bg-black/20 hover:bg-black/30 transition';
+          el.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-semibold truncate">${t.title}</div>
+                <div class="mt-1 text-sm text-white/60 truncate">${projectName(t.projectId)} • ${t.status}</div>
               </div>
+              <span class="text-xs font-bold px-2 py-1 rounded-full border border-white/10 bg-white/5 text-white/70">${t.priority}</span>
             </div>
-            <button class="btn-proj inline-flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${p.id}">
-              <i data-lucide="eye" class="h-4 w-4"></i><span>Szczegóły</span>
-            </button>
-          </div>
-
-          <div class="text-xs text-white/60">Członkowie</div>
-          <div class="flex flex-wrap gap-2">
-            ${p.members.map(id => {
-              const u = usersById[id];
-              if (!u) return "";
-              return `<span class="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs">${u.name}</span>`;
-            }).join("")}
-          </div>
-        </div>
-      `).join("");
-
-      $("#view").innerHTML = `
-        <div class="space-y-6">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h1 class="text-3xl font-bold">Projekty</h1>
-              <p class="text-white/60 mt-1">Aktywny / wstrzymany / zakończony, członkowie, stack, linki.</p>
+            <div class="mt-3 flex items-center justify-between text-xs text-white/60">
+              <span>Deadline: <span class="text-white/80 font-semibold">${t.deadline ? formatDate(t.deadline) : '—'}</span></span>
+              <span class="inline-flex items-center gap-2"><i data-lucide="wallet" class="h-4 w-4 text-[var(--accent)]"></i>${t.points} pkt</span>
             </div>
-            ${(user.role==="admin" || user.role==="pm") ? `
-              <button id="btn-add-proj" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
-                <i data-lucide="plus" class="h-5 w-5"></i><span>Nowy</span>
-              </button>
-            ` : ""}
-          </div>
-
-          ${card("Lista projektów", "Kliknij „Szczegóły”, aby zobaczyć linki repo/Figma/staging.", `<div class="space-y-3">${list}</div>`)}
-        </div>
-      `;
-
-      $$(".btn-proj").forEach(b => b.onclick = () => {
-        const p = db.projects.find(x => x.id === b.dataset.id);
-        if (!p) return;
-
-        modalOpen({
-          title: p.name,
-          sub: `Status: ${p.state} • ${p.id}`,
-          bodyHtml: `
-            <div class="space-y-4">
-              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                <div class="text-xs text-white/60">Stack</div>
-                <div class="mt-2 flex flex-wrap gap-2">
-                  ${(p.stack||[]).map(s => `<span class="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs">${s}</span>`).join("") || `<span class="text-sm text-white/60">Brak</span>`}
-                </div>
-              </div>
-
-              <div class="p-4 rounded-2xl border border-white/10 bg-black/30 space-y-2">
-                <div class="text-xs text-white/60">Linki</div>
-                ${["repo","figma","domain","staging"].map(k => `
-                  <div class="flex items-center justify-between gap-3">
-                    <div class="text-sm font-semibold">${k.toUpperCase()}</div>
-                    <a class="text-sm text-[var(--accent)] hover:underline break-all" href="${p.links?.[k]||"#"}" target="_blank" rel="noopener">${p.links?.[k] ? p.links[k] : "—"}</a>
-                  </div>
-                `).join("")}
-              </div>
-
-              ${(user.role==="admin" || user.role==="pm") ? `
-                <button id="btn-edit-proj" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition">
-                  <i data-lucide="pencil" class="h-4 w-4"></i><span>Edytuj (MVP)</span>
-                </button>
-              ` : ""}
-            </div>
-          `
+          `;
+          el.addEventListener('click', () => openTask(t.id));
+          list.appendChild(el);
         });
 
-        if ($("#btn-edit-proj")) {
-          $("#btn-edit-proj").onclick = () => {
-            modalOpen({
-              title: "Edytuj projekt",
-              sub: "MVP: podstawowe pola",
-              bodyHtml: `
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Nazwa</label>
-                    <input id="ep-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${p.name}">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Status</label>
-                    <select id="ep-state" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                      ${["aktywny","wstrzymany","zakończony"].map(s => `<option ${p.state===s?"selected":""} value="${s}">${s}</option>`).join("")}
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Stack (comma)</label>
-                    <input id="ep-stack" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${(p.stack||[]).join(", ")}">
-                  </div>
-                  <div class="grid grid-cols-1 gap-2">
-                    <input id="ep-repo" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="repo url" value="${p.links?.repo||""}">
-                    <input id="ep-figma" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="figma url" value="${p.links?.figma||""}">
-                    <input id="ep-domain" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="domain url" value="${p.links?.domain||""}">
-                    <input id="ep-staging" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="staging url" value="${p.links?.staging||""}">
-                  </div>
+        // notifications
+        const nl = $('#notif-list');
+        nl.innerHTML = '';
+        store.notifications.slice().sort((a,b)=>b.at-a.at).forEach(n => {
+          const el = document.createElement('div');
+          el.className = 'p-4 rounded-2xl border border-white/10 ' + (n.read ? 'bg-black/15 text-white/60' : 'bg-black/20');
+          el.innerHTML = `
+            <div class="flex items-start gap-3">
+              <div class="h-9 w-9 rounded-xl grid place-items-center bg-[var(--accent)]/15 ring-1 ring-white/10">
+                <i data-lucide="${n.read?'check':'bell'}" class="h-5 w-5 text-[var(--accent)]"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm ${n.read?'':'font-semibold'}">${n.text}</div>
+                <div class="text-xs text-white/50 mt-1">${new Date(n.at).toLocaleString()}</div>
+              </div>
+            </div>
+          `;
+          nl.appendChild(el);
+        });
+      };
 
-                  <div class="pt-2 flex items-center justify-end gap-2">
-                    <button id="ep-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                    <button id="ep-save" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Zapisz</button>
-                  </div>
-                </div>
-              `
-            });
-            $("#ep-cancel").onclick = modalClose;
-            $("#ep-save").onclick = () => {
-              p.name = ($("#ep-name").value||"").trim() || p.name;
-              p.state = $("#ep-state").value;
-              p.stack = ($("#ep-stack").value||"").split(",").map(s => s.trim()).filter(Boolean);
-              p.links = {
-                repo: ($("#ep-repo").value||"").trim(),
-                figma: ($("#ep-figma").value||"").trim(),
-                domain: ($("#ep-domain").value||"").trim(),
-                staging: ($("#ep-staging").value||"").trim(),
-              };
-              saveDB(db);
-              modalClose();
-              toast("Zapisano projekt ✅", "ok");
-              viewProjects(db, user);
-            };
-          };
-        }
+      $('#btn-mark-read').addEventListener('click', () => {
+        store.notifications.forEach(n => n.read = true);
+        toast('Powiadomienia oznaczone jako przeczytane.', 'ok');
+        renderDashboard();
+        lucide.createIcons();
       });
 
-      if ($("#btn-add-proj")) {
-        $("#btn-add-proj").onclick = () => {
-          modalOpen({
-            title: "Nowy projekt",
-            sub: "MVP: nazwa + status + stack",
-            bodyHtml: `
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Nazwa</label>
-                  <input id="np-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. Nowy projekt">
-                </div>
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Status</label>
-                  <select id="np-state" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                    <option value="aktywny">aktywny</option>
-                    <option value="wstrzymany">wstrzymany</option>
-                    <option value="zakończony">zakończony</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Stack (comma)</label>
-                  <input id="np-stack" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="React, Tailwind, Node">
-                </div>
-                <div class="pt-2 flex items-center justify-end gap-2">
-                  <button id="np-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                  <button id="np-add" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
-                </div>
+      // ===== projects render =====
+      const renderProjects = () => {
+        const grid = $('#projects-grid');
+        grid.innerHTML = '';
+        store.projects.forEach(p => {
+          const el = document.createElement('div');
+          el.className = 'p-7 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl';
+          const healthColor = p.health === 'Good' ? 'text-green-300 bg-green-500/10 border-green-500/20'
+                            : p.health === 'At Risk' ? 'text-yellow-300 bg-yellow-500/10 border-yellow-500/20'
+                            : 'text-red-300 bg-red-500/10 border-red-500/20';
+          el.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-xl font-bold truncate">${p.name}</div>
+                <div class="mt-2 text-sm text-white/70 leading-relaxed">${p.desc}</div>
               </div>
-            `
-          });
-          $("#np-cancel").onclick = modalClose;
-          $("#np-add").onclick = () => {
-            const name = ($("#np-name").value||"").trim();
-            if (!name) return toast("Podaj nazwę projektu.", "warn");
-            db.projects.unshift({
-              id: uid("P"),
-              name,
-              state: $("#np-state").value,
-              members: [user.id],
-              stack: ($("#np-stack").value||"").split(",").map(s=>s.trim()).filter(Boolean),
-              links: { repo:"", figma:"", domain:"", staging:"" }
-            });
-            saveDB(db);
-            modalClose();
-            toast("Dodano projekt ✅", "ok");
-            viewProjects(db, user);
+              <span class="text-xs font-bold px-2 py-1 rounded-full border ${healthColor}">${p.health}</span>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-3">
+              <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+                <div class="text-xs text-white/60">Termin projektu</div>
+                <div class="mt-1 font-semibold">${p.due ? formatDate(p.due) : '—'}</div>
+              </div>
+              <div class="p-4 rounded-2xl border border-white/10 bg-black/20">
+                <div class="text-xs text-white/60">Budżet (demo)</div>
+                <div class="mt-1 font-semibold">${p.budget} pkt</div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex flex-wrap gap-2">
+              ${p.members.map(id => `<span class="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">${userName(id)}</span>`).join('')}
+            </div>
+
+            <div class="mt-5 flex items-center justify-between">
+              <button class="btn-open-project tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition border border-white/10" data-p="${p.id}">
+                <i data-lucide="kanban" class="h-4 w-4"></i> Kanban
+              </button>
+              <div class="text-xs text-white/60">${store.tasks.filter(t=>t.projectId===p.id).length} zleceń</div>
+            </div>
+          `;
+          grid.appendChild(el);
+        });
+
+        $$('.btn-open-project').forEach(b => b.addEventListener('click', () => {
+          $('#task-filter-project').value = b.dataset.p;
+          showView('tasks');
+          renderKanban();
+        }));
+      };
+
+      $('#btn-new-project').addEventListener('click', () => {
+        const name = prompt('Nazwa projektu (demo):');
+        if (!name) return;
+        store.projects.unshift({
+          id: uid('p'),
+          name,
+          desc: 'Nowy projekt (demo). Uzupełnij cele i członków w V1.',
+          health: 'Good',
+          budget: 0,
+          due: '',
+          members: [store.me.id]
+        });
+        toast('Projekt utworzony.', 'ok');
+        renderProjects();
+        fillProjectSelects();
+        lucide.createIcons();
+      });
+
+      // ===== kanban render + DnD =====
+      const statuses = ['Backlog','To do','In progress','Review','Done'];
+
+      const fillProjectSelects = () => {
+        const sel = $('#task-project');
+        const sel2 = $('#task-filter-project');
+        sel.innerHTML = '';
+        // filter dropdown
+        const keep = sel2.value;
+        sel2.innerHTML = `<option value="all">Wszystkie projekty</option>` + store.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+        if (keep) sel2.value = keep;
+
+        store.projects.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          sel.appendChild(opt);
+        });
+
+        // assignees
+        const as = $('#task-assignee');
+        as.innerHTML = store.users.map(u => `<option value="${u.id}">${u.name} (${u.role})</option>`).join('');
+        as.value = store.me.id;
+      };
+
+      const renderKanban = () => {
+        const filter = $('#task-filter-project').value;
+        const tasks = filter === 'all' ? store.tasks : store.tasks.filter(t => t.projectId === filter);
+
+        // clear columns
+        statuses.forEach(st => {
+          const drop = $(`[data-drop="${st}"]`);
+          drop.innerHTML = '';
+          $(`[data-count="${st}"]`).textContent = tasks.filter(t=>t.status===st).length;
+        });
+
+        const prioBadge = (p) => {
+          const map = {
+            Low: 'bg-white/5 border-white/10 text-white/70',
+            Medium: 'bg-white/5 border-white/10 text-white/70',
+            High: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-200',
+            Critical: 'bg-red-500/10 border-red-500/20 text-red-200',
           };
+          return map[p] || map.Medium;
         };
-      }
 
-      lucide.createIcons();
-    }
+        tasks.forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'task-card tap p-4 rounded-2xl border border-white/10 bg-black/20 hover:bg-black/30 transition cursor-grab';
+          card.draggable = true;
+          card.dataset.id = t.id;
 
-    function taskCard(t, db) {
-      const u = db.users.find(x => x.id === t.assignee);
-      const due = t.deadline ? new Date(t.deadline) : null;
-      const dueTxt = due ? due.toISOString().slice(0,10) : "—";
-      const prioKind = t.prio==="High" ? "bad" : t.prio==="Medium" ? "warn" : "default";
-      return `
-        <div class="p-3 rounded-2xl border border-white/10 bg-white/5">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <div class="text-sm font-semibold">${t.title}</div>
-              <div class="text-xs text-white/60 mt-0.5">${t.id} • ${u ? u.name : "—"}</div>
-              <div class="flex flex-wrap gap-2 mt-2">
-                ${pill(t.prio, prioKind)}
-                ${pill("Due: " + dueTxt, "default")}
-                ${(t.tags||[]).slice(0,3).map(tag => pill("#"+tag,"default")).join("")}
+          const dd = t.deadline ? new Date(t.deadline) : null;
+          const overdue = dd && dd < new Date() && !['Done'].includes(t.status);
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-semibold leading-snug">${t.title}</div>
+                <div class="mt-1 text-xs text-white/60 truncate">${projectName(t.projectId)}</div>
               </div>
+              <span class="text-xs font-bold px-2 py-1 rounded-full border ${prioBadge(t.priority)}">${t.priority}</span>
             </div>
-            <button class="btn-task rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${t.id}">
-              <i data-lucide="message-circle" class="h-4 w-4"></i>
-            </button>
-          </div>
-        </div>
-      `;
-    }
-
-    function viewTasks(db, user) {
-      const cols = ["ToDo","In Progress","Review","Done"];
-      const tasksByCol = Object.fromEntries(cols.map(c => [c, db.tasks.filter(t => t.status === c)]));
-
-      $("#view").innerHTML = `
-        <div class="space-y-6">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h1 class="text-3xl font-bold">Zadania / backlog</h1>
-              <p class="text-white/60 mt-1">ToDo → In Progress → Review → Done, priorytety, deadline’y, checklisty, tagi.</p>
+            <div class="mt-3 flex items-center justify-between text-xs">
+              <span class="inline-flex items-center gap-2 text-white/60">
+                <i data-lucide="user" class="h-4 w-4"></i>${userName(t.assigneeId)}
+              </span>
+              <span class="inline-flex items-center gap-2 ${overdue?'text-red-200':'text-white/60'}">
+                <i data-lucide="calendar" class="h-4 w-4"></i>${t.deadline ? formatDate(t.deadline) : '—'}
+              </span>
             </div>
-            <button id="btn-add-task" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
-              <i data-lucide="plus" class="h-5 w-5"></i><span>Dodaj</span>
-            </button>
-          </div>
+            <div class="mt-2 flex items-center justify-between text-xs text-white/60">
+              <span class="inline-flex items-center gap-2"><i data-lucide="wallet" class="h-4 w-4 text-[var(--accent)]"></i>${t.points} pkt</span>
+              <span class="inline-flex items-center gap-2"><i data-lucide="messages-square" class="h-4 w-4"></i>${t.comments.length}</span>
+            </div>
+          `;
 
-          <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 items-start">
-            ${cols.map(c => `
-              <div class="p-3 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-                <div class="flex items-center justify-between">
-                  <div class="text-sm font-bold">${c}</div>
-                  <div class="text-xs text-white/60">${tasksByCol[c].length}</div>
-                </div>
-                <div class="mt-3 space-y-3">
-                  ${tasksByCol[c].map(t => taskCard(t, db)).join("") || `<div class="text-xs text-white/60">Brak</div>`}
-                </div>
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      `;
+          card.addEventListener('click', (e) => {
+            // prevent click from triggering when dragging ends weirdly
+            if (card.classList.contains('dragging')) return;
+            openTask(t.id);
+          });
 
-      // open task modal
-      $$(".btn-task").forEach(b => b.onclick = () => {
-        const t = db.tasks.find(x => x.id === b.dataset.id);
+          card.addEventListener('dragstart', () => card.classList.add('dragging'));
+          card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            $$('.dropzone').forEach(el => el.classList.remove('dropzone'));
+          });
+
+          $(`[data-drop="${t.status}"]`).appendChild(card);
+        });
+
+        // drop zones
+        $$('[data-drop]').forEach(zone => {
+          zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('dropzone');
+          });
+          zone.addEventListener('dragleave', () => zone.classList.remove('dropzone'));
+          zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('dropzone');
+            const dragging = $('.task-card.dragging');
+            if (!dragging) return;
+            const id = dragging.dataset.id;
+            const t = byId(store.tasks, id);
+            const newStatus = zone.dataset.drop;
+            if (!t) return;
+            t.status = newStatus;
+            // notify
+            store.notifications.unshift({
+              id: uid('n'),
+              text: `Zadanie „${t.title}” zmieniono na ${newStatus}.`,
+              read:false,
+              at: Date.now()
+            });
+            toast(`Status: ${newStatus}`, 'ok');
+            renderAll();
+          });
+        });
+
+        lucide.createIcons();
+      };
+
+      $('#task-filter-project').addEventListener('change', renderKanban);
+
+      // ===== task modal =====
+      const openTaskModal = () => {
+        $('#modal-task').classList.remove('hidden');
+        $('#task-title').value = '';
+        $('#task-desc').value = '';
+        $('#task-priority').value = 'Medium';
+        $('#task-status').value = 'To do';
+        $('#task-points').value = 5;
+        // default date: +3 days
+        const d = new Date(Date.now()+86400000*3);
+        $('#task-deadline').value = d.toISOString().slice(0,10);
+        fillProjectSelects();
+        lucide.createIcons();
+      };
+      const closeTaskModal = () => $('#modal-task').classList.add('hidden');
+      $('#btn-new-task').addEventListener('click', openTaskModal);
+      $('#btn-quick-task').addEventListener('click', openTaskModal);
+      $('#task-close').addEventListener('click', closeTaskModal);
+      $('#modal-task').addEventListener('click', (e)=>{ if(e.target=== $('#modal-task').firstElementChild) closeTaskModal(); });
+
+      $('#task-save').addEventListener('click', () => {
+        const title = $('#task-title').value.trim();
+        if (!title) return toast('Podaj tytuł.', 'warn');
+        const t = {
+          id: uid('t'),
+          projectId: $('#task-project').value,
+          title,
+          desc: $('#task-desc').value.trim() || '—',
+          status: $('#task-status').value,
+          priority: $('#task-priority').value,
+          assigneeId: $('#task-assignee').value,
+          reporterId: store.me.id,
+          deadline: $('#task-deadline').value,
+          points: Number($('#task-points').value||0),
+          comments: []
+        };
+        store.tasks.unshift(t);
+        store.notifications.unshift({
+          id: uid('n'),
+          text: `Nowe zlecenie „${t.title}” przypisane do ${userName(t.assigneeId)}.`,
+          read:false,
+          at: Date.now()
+        });
+        toast('Zlecenie dodane.', 'ok');
+        closeTaskModal();
+        renderAll();
+      });
+
+      // ===== drawer (task details) =====
+      let openTaskId = null;
+
+      const openTask = (id) => {
+        openTaskId = id;
+        const t = byId(store.tasks,id);
         if (!t) return;
+        $('#drawer').classList.remove('hidden');
+        $('#d-title').textContent = t.title;
+        $('#d-project').textContent = projectName(t.projectId);
+        $('#d-assignee').textContent = userName(t.assigneeId);
+        $('#d-desc').textContent = t.desc;
+        $('#d-status').value = t.status;
+        $('#d-deadline').textContent = t.deadline ? formatDate(t.deadline) : '—';
+        $('#d-priority').textContent = t.priority;
+        $('#d-points').textContent = `${t.points} pkt`;
+        renderComments(t);
+        lucide.createIcons();
+      };
 
-        const u = db.users.find(x => x.id === t.assignee);
-        const canEdit = user.role==="admin" || user.role==="pm" || user.id === t.assignee;
+      const closeDrawer = () => {
+        $('#drawer').classList.add('hidden');
+        openTaskId = null;
+      };
 
-        modalOpen({
-          title: t.title,
-          sub: `${t.id} • ${t.status} • ${u ? u.name : "—"}`,
-          bodyHtml: `
-            <div class="space-y-4">
-              <div class="grid grid-cols-2 gap-3">
-                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="text-xs text-white/60">Priorytet</div>
-                  <div class="text-sm font-semibold mt-1">${t.prio}</div>
-                </div>
-                <div class="p-3 rounded-2xl border border-white/10 bg-black/30">
-                  <div class="text-xs text-white/60">Deadline</div>
-                  <div class="text-sm font-semibold mt-1">${t.deadline || "—"}</div>
-                </div>
+      $('#drawer-close').addEventListener('click', closeDrawer);
+      $('#drawer-backdrop').addEventListener('click', closeDrawer);
+
+      const renderComments = (t) => {
+        const box = $('#d-comments');
+        box.innerHTML = '';
+        if (!t.comments.length) {
+          const empty = document.createElement('div');
+          empty.className = 'text-sm text-white/60 rounded-xl border border-white/10 bg-black/15 p-4';
+          empty.textContent = 'Brak komentarzy. Dodaj krótką informację lub @mention.';
+          box.appendChild(empty);
+          return;
+        }
+        t.comments.slice().sort((a,b)=>a.at-b.at).forEach(c => {
+          const el = document.createElement('div');
+          el.className = 'p-4 rounded-2xl border border-white/10 bg-black/20';
+          el.innerHTML = `
+            <div class="flex items-center justify-between text-xs text-white/60">
+              <span class="font-semibold text-white/80">${userName(c.authorId)}</span>
+              <span>${new Date(c.at).toLocaleString()}</span>
+            </div>
+            <div class="mt-2 text-sm text-white/70 leading-relaxed">${escapeHtml(c.body)}</div>
+          `;
+          box.appendChild(el);
+        });
+      };
+
+      const escapeHtml = (str='') => str
+        .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+        .replaceAll('"','&quot;').replaceAll("'","&#039;")
+        .replaceAll('\n','<br/>');
+
+      $('#d-status').addEventListener('change', () => {
+        if (!openTaskId) return;
+        const t = byId(store.tasks, openTaskId);
+        if (!t) return;
+        t.status = $('#d-status').value;
+        store.notifications.unshift({
+          id: uid('n'),
+          text: `Status „${t.title}” → ${t.status}.`,
+          read:false,
+          at: Date.now()
+        });
+        toast('Status zapisany.', 'ok');
+        renderAll();
+      });
+
+      $('#btn-add-comment').addEventListener('click', () => {
+        if (!openTaskId) return;
+        const t = byId(store.tasks, openTaskId);
+        const body = $('#d-new-comment').value.trim();
+        if (!body) return;
+        t.comments.push({ id: uid('c'), authorId: store.me.id, body, at: Date.now() });
+        $('#d-new-comment').value = '';
+
+        // mention -> notif
+        const mention = store.users.find(u => body.includes('@'+u.name));
+        if (mention) {
+          store.notifications.unshift({
+            id: uid('n'),
+            text: `@${mention.name}: wspomnienie w „${t.title}”.`,
+            read:false,
+            at: Date.now()
+          });
+        }
+
+        toast('Komentarz dodany.', 'ok');
+        renderComments(t);
+        renderDashboard();
+        lucide.createIcons();
+      });
+
+      $('#btn-claim').addEventListener('click', () => {
+        if (!openTaskId) return;
+        const t = byId(store.tasks, openTaskId);
+        if (!t) return;
+        if (t.status !== 'Done') return toast('Claim możliwy dopiero po ustawieniu statusu Done.', 'warn');
+
+        // avoid duplicates
+        const already = store.claims.some(c => c.taskId === t.id && c.status === 'pending');
+        if (already) return toast('Claim już istnieje (pending).', 'warn');
+
+        store.claims.unshift({
+          id: uid('cl'),
+          taskId: t.id,
+          userId: t.assigneeId,
+          projectId: t.projectId,
+          amount: t.points,
+          status: 'pending',
+          createdAt: Date.now()
+        });
+        store.notifications.unshift({
+          id: uid('n'),
+          text: `Nowy claim: ${userName(t.assigneeId)} prosi o ${t.points} pkt za „${t.title}”.`,
+          read:false,
+          at: Date.now()
+        });
+        toast('Claim wysłany do akceptacji.', 'ok');
+        renderAll();
+      });
+
+      // ===== points/claims render =====
+      const renderPoints = () => {
+        $('#claims-list').innerHTML = '';
+        const claims = store.claims.slice().sort((a,b)=>b.createdAt-a.createdAt);
+        if (!claims.length) $('#claims-empty').classList.remove('hidden'); else $('#claims-empty').classList.add('hidden');
+
+        claims.forEach(c => {
+          const t = byId(store.tasks, c.taskId);
+          const p = byId(store.projects, c.projectId);
+          const user = byId(store.users, c.userId);
+          const el = document.createElement('div');
+          el.className = 'p-4 rounded-2xl border border-white/10 bg-black/20';
+          const canApprove = ['Owner','Manager'].includes(store.me.role);
+          el.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-semibold">${t?.title || '—'}</div>
+                <div class="mt-1 text-sm text-white/60 truncate">${p?.name || '—'} • ${user?.name || '—'}</div>
+                <div class="mt-2 text-xs text-white/60">Utworzono: ${new Date(c.createdAt).toLocaleString()}</div>
               </div>
-
-              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                <div class="text-xs text-white/60">Checklist</div>
-                <div class="mt-2 space-y-2">
-                  ${(t.checklist||[]).map((c, i) => `
-                    <label class="flex items-center gap-2 text-sm">
-                      <input class="chk accent-[var(--accent)]" type="checkbox" data-idx="${i}">
-                      <span>${c}</span>
-                    </label>
-                  `).join("") || `<div class="text-sm text-white/60">Brak</div>`}
+              <div class="flex flex-col items-end gap-2">
+                <div class="text-sm font-bold inline-flex items-center gap-2">
+                  <i data-lucide="wallet" class="h-4 w-4 text-[var(--accent)]"></i> ${c.amount} pkt
                 </div>
+                <span class="text-xs font-bold px-2 py-1 rounded-full border ${c.status==='pending'?'bg-yellow-500/10 border-yellow-500/20 text-yellow-200':'bg-green-500/10 border-green-500/20 text-green-200'}">
+                  ${c.status}
+                </span>
               </div>
+            </div>
 
-              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="text-xs text-white/60">Komentarze</div>
-                  <div class="text-xs text-white/60">${(t.comments||[]).length}</div>
-                </div>
-
-                <div class="mt-3 space-y-2">
-                  ${(t.comments||[]).map(c => `
-                    <div class="p-3 rounded-2xl border border-white/10 bg-white/5">
-                      <div class="text-sm font-semibold">${c.author} <span class="text-xs text-white/60 font-normal">• ${new Date(c.ts).toLocaleString()}</span></div>
-                      <div class="text-sm text-white/80 mt-1 whitespace-pre-wrap">${c.text}</div>
-                    </div>
-                  `).join("") || `<div class="text-sm text-white/60">Brak komentarzy</div>`}
-                </div>
-
-                <div class="mt-3 flex gap-2">
-                  <input id="cmt" class="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Dodaj komentarz… (@wzmianki działają jako tekst)">
-                  <button id="btn-cmt" class="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition">Wyślij</button>
-                </div>
-              </div>
-
-              ${canEdit ? `
-                <div class="grid grid-cols-2 gap-2">
-                  <button id="btn-move" class="rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition inline-flex items-center justify-center gap-2">
-                    <i data-lucide="arrow-right" class="h-4 w-4"></i><span>Przesuń dalej</span>
-                  </button>
-                  <button id="btn-edit" class="rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition inline-flex items-center justify-center gap-2">
-                    <i data-lucide="pencil" class="h-4 w-4"></i><span>Edytuj</span>
-                  </button>
-                </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+              ${canApprove && c.status==='pending' ? `
+                <button class="btn-approve tap inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition shadow-[0_8px_30px_rgba(255,3,84,0.25)]" data-id="${c.id}">
+                  <i data-lucide="check" class="h-4 w-4"></i> Zatwierdź
+                </button>
+                <button class="btn-reject tap inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition border border-white/10" data-id="${c.id}">
+                  <i data-lucide="x" class="h-4 w-4"></i> Odrzuć
+                </button>
               ` : `
-                <div class="text-xs text-white/60">Nie masz uprawnień do edycji tego zadania.</div>
+                <div class="text-xs text-white/60">Akcja dostępna dla Manager/Owner (RBAC).</div>
               `}
             </div>
-          `
+          `;
+          $('#claims-list').appendChild(el);
         });
 
-        $("#btn-cmt").onclick = () => {
-          const text = ($("#cmt").value||"").trim();
-          if (!text) return;
-          t.comments = t.comments || [];
-          t.comments.push({ author: user.name, text, ts: Date.now() });
-          saveDB(db);
-          toast("Dodano komentarz ✅", "ok");
-          viewTasks(db, user);
-          modalClose();
-        };
+        $$('.btn-approve').forEach(b => b.addEventListener('click', () => approveClaim(b.dataset.id)));
+        $$('.btn-reject').forEach(b => b.addEventListener('click', () => rejectClaim(b.dataset.id)));
 
-        if ($("#btn-move")) {
-          $("#btn-move").onclick = () => {
-            const order = ["ToDo","In Progress","Review","Done"];
-            const idx = order.indexOf(t.status);
-            t.status = order[Math.min(idx+1, order.length-1)];
-            saveDB(db);
-            toast("Zmieniono status ✅", "ok");
-            viewTasks(db, user);
-            modalClose();
-          };
-        }
+        // tx table
+        const tbody = $('#tx-table');
+        tbody.innerHTML = '';
+        store.tx.slice().sort((a,b)=>b.at-a.at).forEach(x => {
+          const row = document.createElement('tr');
+          row.className = 'border-b border-white/10';
+          const statusPill = x.status==='approved'
+            ? `<span class="text-xs font-bold bg-green-500/10 text-green-400 px-2 py-1 rounded-full">approved</span>`
+            : `<span class="text-xs font-bold bg-yellow-500/10 text-yellow-400 px-2 py-1 rounded-full">pending</span>`;
+          row.innerHTML = `
+            <td class="p-3 text-sm text-white/70">${new Date(x.at).toLocaleString()}</td>
+            <td class="p-3 text-sm text-white/70">${x.type}</td>
+            <td class="p-3 text-sm text-white/70">${projectName(x.projectId)}</td>
+            <td class="p-3 text-sm text-white/70">${byId(store.tasks,x.taskId)?.title || '—'}</td>
+            <td class="p-3 font-semibold text-white">${x.amount} pkt</td>
+            <td class="p-3">${statusPill}</td>
+          `;
+          tbody.appendChild(row);
+        });
 
-        if ($("#btn-edit")) {
-          $("#btn-edit").onclick = () => {
-            modalOpen({
-              title: "Edytuj zadanie",
-              sub: "MVP: tytuł, priorytet, deadline, tagi, przypisanie",
-              bodyHtml: `
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Tytuł</label>
-                    <input id="et-title" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${t.title}">
-                  </div>
+        lucide.createIcons();
+      };
 
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs text-white/60 mb-1">Priorytet</label>
-                      <select id="et-prio" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                        ${["Low","Medium","High"].map(p => `<option ${t.prio===p?"selected":""} value="${p}">${p}</option>`).join("")}
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-xs text-white/60 mb-1">Deadline</label>
-                      <input id="et-deadline" type="date" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${t.deadline || ""}">
-                    </div>
-                  </div>
+      const approveClaim = (id) => {
+        const c = byId(store.claims, id);
+        if (!c || c.status !== 'pending') return;
+        c.status = 'approved';
 
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Assignee</label>
-                    <select id="et-assignee" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                      ${db.users.map(u => `<option ${t.assignee===u.id?"selected":""} value="${u.id}">${u.name} • ${u.role}</option>`).join("")}
-                    </select>
-                  </div>
+        // add points to user (demo)
+        if (c.userId === store.me.id) store.me.points += c.amount;
 
-                  <div>
-                    <label class="block text-xs text-white/60 mb-1">Tagi (comma)</label>
-                    <input id="et-tags" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" value="${(t.tags||[]).join(", ")}">
-                  </div>
+        store.tx.unshift({
+          id: uid('tx'),
+          at: Date.now(),
+          type: 'earn',
+          projectId: c.projectId,
+          taskId: c.taskId,
+          amount: c.amount,
+          status: 'approved'
+        });
 
-                  <div class="pt-2 flex items-center justify-end gap-2">
-                    <button id="et-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                    <button id="et-save" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Zapisz</button>
-                  </div>
-                </div>
-              `
-            });
-            $("#et-cancel").onclick = modalClose;
-            $("#et-save").onclick = () => {
-              t.title = ($("#et-title").value||"").trim() || t.title;
-              t.prio = $("#et-prio").value;
-              t.deadline = $("#et-deadline").value || "";
-              t.assignee = $("#et-assignee").value;
-              t.tags = ($("#et-tags").value||"").split(",").map(s=>s.trim()).filter(Boolean);
-              saveDB(db);
-              modalClose();
-              toast("Zapisano zadanie ✅", "ok");
-              viewTasks(db, user);
-            };
-          };
-        }
+        store.notifications.unshift({
+          id: uid('n'),
+          text: `Claim zatwierdzony: ${userName(c.userId)} +${c.amount} pkt.`,
+          read:false,
+          at: Date.now()
+        });
+
+        toast('Claim zatwierdzony.', 'ok');
+        renderAll();
+      };
+
+      const rejectClaim = (id) => {
+        const c = byId(store.claims, id);
+        if (!c || c.status !== 'pending') return;
+        c.status = 'rejected';
+        store.notifications.unshift({
+          id: uid('n'),
+          text: `Claim odrzucony dla tasku „${byId(store.tasks,c.taskId)?.title || '—'}”.`,
+          read:false,
+          at: Date.now()
+        });
+        toast('Claim odrzucony.', 'warn');
+        renderAll();
+      };
+
+      $('#btn-seed-earn').addEventListener('click', () => {
+        store.tx.unshift({
+          id: uid('tx'),
+          at: Date.now(),
+          type: 'adjust',
+          projectId: store.projects[0]?.id || 'p1',
+          taskId: store.tasks[0]?.id || 't1',
+          amount: 3,
+          status: 'approved'
+        });
+        toast('Dodano demo transakcję.', 'ok');
+        renderPoints();
       });
 
-      $("#btn-add-task").onclick = () => {
-        modalOpen({
-          title: "Dodaj zadanie",
-          sub: "Szybkie dodanie do ToDo",
-          bodyHtml: `
-            <div class="space-y-3">
-              <div>
-                <label class="block text-xs text-white/60 mb-1">Tytuł</label>
-                <input id="nt-title" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="np. Integracja GitHub">
-              </div>
+      // ===== reports =====
+      const renderReports = () => {
+        $('#rep-total').textContent = store.tasks.length;
+        const now = Date.now();
+        const deadlines = store.tasks.filter(t=>t.deadline).map(t => (new Date(t.deadline).getTime() - now)/86400000);
+        const avg = deadlines.length ? (deadlines.reduce((a,b)=>a+b,0)/deadlines.length) : null;
+        $('#rep-avg').textContent = avg===null ? '—' : `${avg.toFixed(1)} dni`;
 
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Priorytet</label>
-                  <select id="nt-prio" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                    <option value="Low">Low</option>
-                    <option value="Medium" selected>Medium</option>
-                    <option value="High">High</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs text-white/60 mb-1">Deadline</label>
-                  <input id="nt-deadline" type="date" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                </div>
-              </div>
+        const earned = store.tx.filter(t=>t.type==='earn' && t.status==='approved').reduce((s,x)=>s+x.amount,0);
+        $('#rep-points').textContent = `${earned} pkt`;
 
-              <div>
-                <label class="block text-xs text-white/60 mb-1">Assignee</label>
-                <select id="nt-assignee" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                  ${db.users.map(u => `<option value="${u.id}">${u.name} • ${u.role}</option>`).join("")}
-                </select>
+        // load per user
+        const box = $('#rep-load');
+        box.innerHTML = '';
+        store.users.forEach(u => {
+          const inWork = store.tasks.filter(t => t.assigneeId===u.id && !['Done'].includes(t.status)).length;
+          const overdue = store.tasks.filter(t => t.assigneeId===u.id && t.deadline && new Date(t.deadline) < new Date() && !['Done'].includes(t.status)).length;
+          const el = document.createElement('div');
+          el.className = 'p-5 rounded-2xl border border-white/10 bg-black/20';
+          el.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div class="font-semibold">${u.name}</div>
+              <span class="text-xs text-white/60">${u.role}</span>
+            </div>
+            <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div class="p-3 rounded-xl border border-white/10 bg-white/5">
+                <div class="text-xs text-white/60">W toku</div>
+                <div class="mt-1 font-bold">${inWork}</div>
               </div>
-
-              <div>
-                <label class="block text-xs text-white/60 mb-1">Tagi (comma)</label>
-                <input id="nt-tags" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="frontend, backend, bug, design">
-              </div>
-
-              <div class="pt-2 flex items-center justify-end gap-2">
-                <button id="nt-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                <button id="nt-add" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
+              <div class="p-3 rounded-xl border border-white/10 bg-white/5">
+                <div class="text-xs text-white/60">Po terminie</div>
+                <div class="mt-1 font-bold ${overdue? 'text-red-200':''}">${overdue}</div>
               </div>
             </div>
-          `
+          `;
+          box.appendChild(el);
         });
-        $("#nt-cancel").onclick = modalClose;
-        $("#nt-add").onclick = () => {
-          const title = ($("#nt-title").value||"").trim();
-          if (!title) return toast("Podaj tytuł.", "warn");
-          db.tasks.unshift({
-            id: uid("T"),
-            title,
-            status: "ToDo",
-            prio: $("#nt-prio").value,
-            deadline: $("#nt-deadline").value || "",
-            assignee: $("#nt-assignee").value,
-            tags: ($("#nt-tags").value||"").split(",").map(s=>s.trim()).filter(Boolean),
-            checklist: [],
-            comments: []
-          });
-          saveDB(db);
-          modalClose();
-          toast("Dodano zadanie ✅", "ok");
-          viewTasks(db, user);
-        };
       };
 
-      lucide.createIcons();
-    }
-
-    function viewBugs(db, user) {
-      const usersById = Object.fromEntries(db.users.map(u => [u.id, u]));
-      const rows = db.bugs.map(b => `
-        <div class="p-4 rounded-2xl border border-white/10 bg-black/30 space-y-2">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="text-sm font-semibold">${b.title}</div>
-              <div class="text-xs text-white/60 mt-0.5">${b.id} • env: ${b.env} • ${b.status}</div>
-              <div class="flex flex-wrap gap-2 mt-2">
-                ${pill(b.env, b.env==="prod" ? "bad" : "warn")}
-                ${pill(b.status, b.status==="Otwarty" ? "warn" : b.status==="W naprawie" ? "warn" : "ok")}
-                ${pill("Assignee: " + (usersById[b.assignee]?.name || "—"), "default")}
-              </div>
-            </div>
-            <button class="btn-bug rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${b.id}">
-              <i data-lucide="file-text" class="h-4 w-4"></i>
-            </button>
-          </div>
-        </div>
-      `).join("");
-
-      $("#view").innerHTML = `
-        <div class="space-y-6">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h1 class="text-3xl font-bold">Bug tracker</h1>
-              <p class="text-white/60 mt-1">Zgłoszenia, środowisko (prod/staging), kroki reprodukcji, status naprawy.</p>
-            </div>
-            <button id="btn-add-bug" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
-              <i data-lucide="plus" class="h-5 w-5"></i><span>Zgłoś</span>
-            </button>
-          </div>
-
-          ${card("Lista zgłoszeń", "Kliknij szczegóły aby zobaczyć kroki reprodukcji.", `<div class="space-y-3">${rows || `<div class="text-sm text-white/60">Brak zgłoszeń</div>`}</div>`)}
-        </div>
-      `;
-
-      $$(".btn-bug").forEach(btn => btn.onclick = () => {
-        const b = db.bugs.find(x => x.id === btn.dataset.id);
-        if (!b) return;
-        modalOpen({
-          title: b.title,
-          sub: `${b.id} • ${b.env} • ${b.status}`,
-          bodyHtml: `
-            <div class="space-y-3">
-              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                <div class="text-xs text-white/60">Kroki reprodukcji</div>
-                <pre class="mt-2 whitespace-pre-wrap text-sm text-white/80">${b.steps || "—"}</pre>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2">
-                <button id="b-status" class="rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition">Zmień status</button>
-                <button id="b-assign" class="rounded-xl bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition">Przypisz</button>
-              </div>
-            </div>
-          `
-        });
-
-        $("#b-status").onclick = () => {
-          const order = ["Otwarty","W naprawie","Do testów","Zamknięty"];
-          const idx = order.indexOf(b.status);
-          b.status = order[Math.min(idx+1, order.length-1)];
-          saveDB(db);
-          toast("Zmieniono status ✅", "ok");
-          modalClose();
-          viewBugs(db, user);
-        };
-
-        $("#b-assign").onclick = () => {
-          modalOpen({
-            title: "Przypisz buga",
-            sub: "Wybierz osobę z zespołu",
-            bodyHtml: `
-              <div class="space-y-3">
-                <select id="ba" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                  ${db.users.map(u => `<option ${b.assignee===u.id?"selected":""} value="${u.id}">${u.name} • ${u.role}</option>`).join("")}
-                </select>
-                <div class="flex justify-end gap-2">
-                  <button id="bac" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                  <button id="bas" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Zapisz</button>
-                </div>
-              </div>
-            `
-          });
-          $("#bac").onclick = modalClose;
-          $("#bas").onclick = () => {
-            b.assignee = $("#ba").value;
-            saveDB(db);
-            modalClose();
-            toast("Przypisano ✅", "ok");
-            viewBugs(db, user);
-          };
-        };
+      // ===== settings =====
+      $('#btn-save-profile').addEventListener('click', () => {
+        store.me.name = $('#set-name').value.trim() || store.me.name;
+        store.me.role = $('#set-role').value;
+        toast('Zapisano profil (demo).', 'ok');
+        syncHeader();
+        renderPoints(); // role affects approve buttons
       });
 
-      $("#btn-add-bug").onclick = () => {
-        modalOpen({
-          title: "Zgłoś błąd",
-          sub: "MVP: tytuł + env + kroki",
-          bodyHtml: `
-            <div class="space-y-3">
-              <input id="nb-title" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Tytuł buga">
-              <select id="nb-env" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                <option value="prod">prod</option>
-                <option value="staging" selected>staging</option>
-              </select>
-              <textarea id="nb-steps" rows="5" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Kroki reprodukcji…"></textarea>
-              <div class="flex justify-end gap-2">
-                <button id="nb-cancel" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                <button id="nb-add" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
-              </div>
-            </div>
-          `
-        });
-        $("#nb-cancel").onclick = modalClose;
-        $("#nb-add").onclick = () => {
-          const title = ($("#nb-title").value||"").trim();
-          if (!title) return toast("Podaj tytuł.", "warn");
-          db.bugs.unshift({
-            id: uid("B"),
-            title,
-            env: $("#nb-env").value,
-            status: "Otwarty",
-            steps: ($("#nb-steps").value||"").trim(),
-            assignee: user.id
-          });
-          saveDB(db);
-          modalClose();
-          toast("Dodano zgłoszenie ✅", "ok");
-          viewBugs(db, user);
-        };
-      };
-
-      lucide.createIcons();
-    }
-
-    function viewSecrets(db, user) {
-      const perms = ROLE_PERMS[user.role] || {};
-      if (!perms.canSeeSecrets) {
-        $("#view").innerHTML = `
-          <div class="space-y-6">
-            ${card("Dostępy & sekrety", "Tylko admin ma wgląd (bez haseł!).", `
-              <div class="p-4 rounded-2xl border border-white/10 bg-black/30">
-                <div class="text-sm font-semibold">Brak dostępu</div>
-                <div class="text-sm text-white/60 mt-1">Ten moduł jest widoczny tylko dla admina.</div>
-              </div>
-            `)}
-          </div>
-        `;
-        return;
-      }
-
-      const rows = db.secrets.map(s => `
-        <div class="p-4 rounded-2xl border border-white/10 bg-black/30 flex items-start justify-between gap-3">
-          <div>
-            <div class="text-sm font-semibold">${s.name}</div>
-            <div class="text-xs text-white/60 mt-0.5">${s.id} • typ: ${s.type} • właściciel: ${(db.users.find(u => u.id===s.owner)?.name || "—")}</div>
-            <div class="flex flex-wrap gap-2 mt-2">
-              ${pill("wygasa: " + (s.expires || "—"), s.expires ? "warn" : "default")}
-              ${pill("bez haseł", "ok")}
-            </div>
-            <div class="text-sm text-white/70 mt-2">${s.note || ""}</div>
-          </div>
-          <button class="btn-del-secret rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition" data-id="${s.id}">
-            <i data-lucide="trash-2" class="h-4 w-4"></i>
-          </button>
-        </div>
-      `).join("");
-
-      $("#view").innerHTML = `
-        <div class="space-y-6">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h1 class="text-3xl font-bold">Dostępy & sekrety</h1>
-              <p class="text-white/60 mt-1">Lista dostępów (API/serwery) – bez haseł. Tylko meta + kto ma dostęp.</p>
-            </div>
-            <button id="btn-add-secret" class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold hover:brightness-110 transition shadow-[0_10px_40px_rgba(255,3,84,0.25)]">
-              <i data-lucide="plus" class="h-5 w-5"></i><span>Dodaj</span>
-            </button>
-          </div>
-
-          ${card("Dostępy", "W idealnym świecie to jest integracja z menedżerem haseł; tu tylko metadata.", `<div class="space-y-3">${rows || `<div class="text-sm text-white/60">Brak wpisów</div>`}</div>`)}
-        </div>
-      `;
-
-      $$(".btn-del-secret").forEach(btn => btn.onclick = () => {
-        const id = btn.dataset.id;
-        db.secrets = db.secrets.filter(s => s.id !== id);
-        saveDB(db);
-        toast("Usunięto wpis ✅", "ok");
-        viewSecrets(db, user);
+      // ===== logout =====
+      $('#btn-logout').addEventListener('click', () => {
+        localStorage.removeItem('teamPanelSession');
+        location.reload();
       });
 
-      $("#btn-add-secret").onclick = () => {
-        modalOpen({
-          title: "Dodaj dostęp",
-          sub: "Bez haseł – tylko opis, kto ma dostęp, wygasanie.",
-          bodyHtml: `
-            <div class="space-y-3">
-              <input id="ns-name" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Nazwa">
-              <select id="ns-type" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                <option value="API">API</option>
-                <option value="Serwer">Serwer</option>
-                <option value="Panel">Panel</option>
-              </select>
-              <select id="ns-owner" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition">
-                ${db.users.map(u => `<option value="${u.id}">${u.name} • ${u.role}</option>`).join("")}
-              </select>
-              <input id="ns-exp" type="date" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" />
-              <textarea id="ns-note" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition" placeholder="Notatka (meta)"></textarea>
-              <div class="flex justify-end gap-2">
-                <button id="ns-c" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition">Anuluj</button>
-                <button id="ns-a" class="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold hover:brightness-110 transition">Dodaj</button>
-              </div>
-            </div>
-          `
-        });
-        $("#ns-c").onclick = modalClose;
-        $("#ns-a").onclick = () => {
-          const name = ($("#ns-name").value||"").trim();
-          if (!name) return toast("Podaj nazwę.", "warn");
-          db.secrets.unshift({
-            id: uid("S"),
-            name,
-            type: $("#ns-type").value,
-            owner: $("#ns-owner").value,
-            expires: $("#ns-exp").value || "",
-            note: ($("#ns-note").value||"").trim()
-          });
-          saveDB(db);
-          modalClose();
-          toast("Dodano dostęp ✅", "ok");
-          viewSecrets(db, user);
-        };
+      // ===== render all =====
+      const renderAll = () => {
+        syncHeader();
+        renderDashboard();
+        renderProjects();
+        fillProjectSelects();
+        renderKanban();
+        renderPoints();
+        renderReports();
+        lucide.createIcons();
       };
 
-      lucide.createIcons();
-    }
-
-    function viewSimple(title, subtitle, icon, blocks) {
-      $("#view").innerHTML = `
-        <div class="space-y-6">
-          <div>
-            <h1 class="text-3xl font-bold">${title}</h1>
-            <p class="text-white/60 mt-1">${subtitle}</p>
-          </div>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            ${blocks.map(b => `
-              <div class="p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-                <div class="flex items-start gap-3">
-                  <div class="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                    <i data-lucide="${b.icon || icon}" class="h-5 w-5 text-[var(--accent)]"></i>
-                  </div>
-                  <div>
-                    <div class="text-sm font-semibold">${b.title}</div>
-                    <div class="text-sm text-white/60 mt-1">${b.text}</div>
-                  </div>
-                </div>
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      `;
-      lucide.createIcons();
-    }
-
-    function route(db, user) {
-      const hash = location.hash || "#/";
-      const h = hash.replace("#/", "");
-      setActiveNav("#/" + (h || ""));
-
-      // if not authed -> login
-      if (!user) {
-        viewLogin();
-        return;
-      }
-
-      if (hash === "#/" || hash === "#/dashboard") return viewDashboard(db, user);
-      if (hash === "#/team") return viewTeam(db, user);
-      if (hash === "#/projects") return viewProjects(db, user);
-      if (hash === "#/tasks") return viewTasks(db, user);
-      if (hash === "#/bugs") return viewBugs(db, user);
-      if (hash === "#/secrets") return viewSecrets(db, user);
-
-      if (hash === "#/git") {
-        return viewSimple(
-          "Integracje Git",
-          "MVP: miejsce na GitHub/GitLab, PR-y, commity, statusy CI.",
-          "git-branch",
-          [
-            { title:"Podpięcie GitHub / GitLab", text:"Docelowo OAuth + tokeny serwerowe. Tu tylko UI placeholder.", icon:"plug" },
-            { title:"Commity i PR-y", text:"Lista PR-ów, linkowanie commit ↔ zadanie (#T-123).", icon:"git-pull-request" },
-            { title:"CI / build status", text:"Podgląd pipeline (success/fail), badge w projekcie.", icon:"activity" },
-            { title:"Automaty: PR merged → Done", text:"Hooki (webhook) + reguły statusów.", icon:"zap" },
-          ]
-        );
-      }
-
-      if (hash === "#/comms") {
-        return viewSimple(
-          "Komunikacja",
-          "Komentarze, @wzmianki, powiadomienia web/push/mail.",
-          "messages-square",
-          [
-            { title:"Komentarze pod zadaniami", text:"Masz już w zadaniach – rozbudujesz o wątki, reakcje.", icon:"message-circle" },
-            { title:"@wzmianki", text:"MVP: tekst. Produkcja: parsing + powiadomienia.", icon:"at-sign" },
-            { title:"Powiadomienia", text:"Web + push (demo). Mail po backendzie.", icon:"bell" },
-            { title:"Realtime", text:"Socket.IO / WebSocket pod czat i eventy.", icon:"radio" },
-          ]
-        );
-      }
-
-      if (hash === "#/design") {
-        return viewSimple(
-          "Design hub",
-          "Figma / Adobe / assets, wersje makiet, status akceptacji.",
-          "palette",
-          [
-            { title:"Linki Figma/Adobe", text:"Dodaj per projekt, z dostępami tylko do zespołu.", icon:"link" },
-            { title:"Wersjonowanie makiet", text:"v1/v2 + changelog do decyzji.", icon:"git-commit" },
-            { title:"Komentarze do designu", text:"Powiąż z zadaniami i PR-ami.", icon:"message-square" },
-            { title:"Status akceptacji", text:"Do akceptacji / Zaakceptowane.", icon:"stamp" },
-          ]
-        );
-      }
-
-      if (hash === "#/assets") {
-        return viewSimple(
-          "Asset manager",
-          "Logo, ikony, ilustracje, wersje i zasady użycia.",
-          "images",
-          [
-            { title:"Pliki + wersje", text:"W produkcji: upload + storage + checksum.", icon:"file-up" },
-            { title:"Brand book", text:"Zasady użycia, marginesy, kolory, typografia.", icon:"book-open" },
-            { title:"Podgląd", text:"Miniatury + tagi + filtrowanie.", icon:"scan" },
-            { title:"Uprawnienia", text:"Kto może dodawać/usuwać.", icon:"shield-check" },
-          ]
-        );
-      }
-
-      if (hash === "#/docs") {
-        return viewSimple(
-          "Wiki / Docs",
-          "Dokumentacja, onboarding, konwencje, checklisty release.",
-          "book-text",
-          [
-            { title:"Onboarding", text:"Kroki wejścia do zespołu + dostęp do repo i narzędzi.", icon:"graduation-cap" },
-            { title:"Konwencje kodu", text:"lint/format/branch strategy/commit rules.", icon:"braces" },
-            { title:"Checklisty release", text:"QA, migracje, backup, deploy, monitoring.", icon:"clipboard-check" },
-            { title:"Search", text:"W produkcji: full-text search + tagi.", icon:"search" },
-          ]
-        );
-      }
-
-      if (hash === "#/snippets") {
-        return viewSimple(
-          "Snippety & wzorce",
-          "Boilerplate’y, best practices, gotowe fragmenty kodu.",
-          "braces",
-          [
-            { title:"Snippet library", text:"Tagi: frontend/backend/bug/design/devops.", icon:"code" },
-            { title:"Boilerplate", text:"Nowy projekt? Odpalasz template + checklistę.", icon:"package" },
-            { title:"Best practices", text:"Wewnętrzne standardy zespołu.", icon:"badge-check" },
-            { title:"AI helper", text:"Generowanie dokumentacji z kodu (docstrings).", icon:"sparkles" },
-          ]
-        );
-      }
-
-      if (hash === "#/releases") {
-        return viewSimple(
-          "Release manager",
-          "Lista wersji, changelog, co idzie na produkcję.",
-          "rocket",
-          [
-            { title:"Wersje i changelog", text:"Zadania + PR-y spięte z release.", icon:"tag" },
-            { title:"Scope produkcji", text:"Lista rzeczy, które idą na deploy.", icon:"list-checks" },
-            { title:"Checklisty", text:"QA/monitoring/rollback plan.", icon:"shield-alert" },
-            { title:"Automaty", text:"Po deploy → update statusów.", icon:"zap" },
-          ]
-        );
-      }
-
-      if (hash === "#/automation") {
-        return viewSimple(
-          "Automatyzacje",
-          "Webhooki i reguły, które oszczędzają czas.",
-          "zap",
-          [
-            { title:"PR merged → Done", text:"Reguły po webhookach.", icon:"git-merge" },
-            { title:"Nowy bug → dyżurny", text:"Rotacja dyżuru + przypisanie.", icon:"user-cog" },
-            { title:"Integracje", text:"Discord/Slack/email/push.", icon:"link" },
-            { title:"Event bus", text:"Socket.IO events w panelu.", icon:"radio" },
-          ]
-        );
-      }
-
-      if (hash === "#/ai") {
-        return viewSimple(
-          "AI asystent zespołu",
-          "Podsumowania sprintu, auto-opisy, code review hints, docs generator.",
-          "sparkles",
-          [
-            { title:"Sprint summary", text:"Agregacja done/in-progress + highlight ryzyk.", icon:"clipboard-list" },
-            { title:"Auto-opisy zadań", text:"Z krótkiego promptu do pełnego opisu + checklist.", icon:"wand-2" },
-            { title:"Code review suggestions", text:"Wykrywanie ryzyk, styl, testy.", icon:"search-check" },
-            { title:"Generowanie dokumentacji", text:"Z README/komentarzy do docs.", icon:"book-plus" },
-          ]
-        );
-      }
-
-      // fallback
-      viewDashboard(db, user);
-    }
-
-    // =========================
-    //  Drawer
-    // =========================
-    function openDrawer(){ $("#drawer").classList.remove("hidden"); }
-    function closeDrawer(){ $("#drawer").classList.add("hidden"); }
-
-    // =========================
-    //  Render
-    // =========================
-    function render() {
-      const db = loadDB();
-      const user = getCurrentUser(db);
-
-      renderNav(user);
-      headerUserUI(user);
-
-      // logout
-      const doLogout = () => {
-        clearSession();
-        toast("Wylogowano.", "ok");
-        location.hash = "#/";
-        render();
-      };
-
-      $("#btn-logout").onclick = doLogout;
-      $("#btn-logout-m").onclick = doLogout;
-
-      // refresh
-      const doSync = () => {
-        toast("Odświeżono ✅", "ok");
-        render();
-      };
-      $("#btn-sync").onclick = doSync;
-      $("#btn-sync-m").onclick = doSync;
-
-      // push
-      $("#btn-push").onclick = requestPush;
-      $("#btn-push-m").onclick = requestPush;
-
-      // drawer
-      $("#btn-menu").onclick = openDrawer;
-      $("#btn-close-drawer").onclick = closeDrawer;
-      $("#drawer-backdrop").onclick = closeDrawer;
-
-      // modal
-      $("#modal-close").onclick = modalClose;
-      $("#modal-backdrop").onclick = modalClose;
-
-      // route
-      route(db, user);
-
-      // icons
-      lucide.createIcons();
-    }
-
-    // =========================
-    //  Init
-    // =========================
-    document.addEventListener("DOMContentLoaded", () => {
+      // ===== initial =====
       createParticles();
-      render();
-      window.addEventListener("hashchange", render);
       lucide.createIcons();
+      paintDots();
+
+      if (!$('#lockscreen').classList.contains('hidden')) {
+        // keep on login
+      } else {
+        renderAll();
+      }
     });
   </script>
 </body>
